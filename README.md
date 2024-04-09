@@ -8,25 +8,23 @@
 
 1. **Клонуйте репозиторій**: Спочатку склонуйте цей репозиторій за допомогою Git:
 
-    
+    ```bash
     git clone https://github.com/Randayy/FastAPI_App.git
    
 
 2. **Перейдіть у директорію проекту**: Перейдіть у директорію проекту:
-
-    
+   ```bash
     cd FastAPI_App
     
-
 3. **Встановіть залежності**: Встановіть необхідні залежності за допомогою pip:
 
-    
+    ```bash
     pip install -r requirements.txt | pip3 install -r requirements.txt
     
 
 4. **Запустіть додаток**: Запустіть додаток FastAPI за допомогою uvicorn:
 
-    
+    ```bash
     uvicorn App.main:app --reload
     
 
