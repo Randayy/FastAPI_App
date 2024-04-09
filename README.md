@@ -23,14 +23,9 @@
     
 
 4. **Запустіть додаток**: Запустіть додаток FastAPI за допомогою uvicorn або запустивши main:
-
-    ```bash
-    uvicorn app.main:app --reload
     
- або:
-
-        ```bash
-        python -m app.main
+   ```bash
+   python -m app.main
 
 
     
