@@ -1,10 +1,4 @@
-import pytest
-from fastapi.testclient import TestClient
-from utils.main import app
-
-@pytest.fixture
-def client():
-    return TestClient(app)
+from .conftest import client
 
 def test_health_check(client):
     response = client.get("/")
@@ -15,5 +9,3 @@ def test_health_check(client):
             "result": "working"
             }
     
-if __name__ == "__main__":
-    pytest.main()
