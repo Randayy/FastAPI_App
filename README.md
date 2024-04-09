@@ -22,7 +22,7 @@
     pip install -r requirements.txt | pip3 install -r requirements.txt
     
 
-4. **Запустіть додаток**: Запустіть додаток FastAPI за допомогою uvicorn або запустивши main:
+4. **Запустіть додаток**: Запустіть додаток FastAPI запустивши main:
     
    ```bash
    python -m app.main
