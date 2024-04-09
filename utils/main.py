@@ -1,6 +1,7 @@
 from fastapi import FastAPI
-from .routers.routes import router
-from .settings import HOST, PORT
+from . import *
+from routers.routes import router
+from settings import HOST, PORT
 
 app = FastAPI()
 
