@@ -1,0 +1,6 @@
+fastapi==0.109.0
+redis==4.1.1
+types-redis==4.6.0.8
+pydantic==2.6.4
+uvicorn==0.15.0
+pydantic-settings==2.2.1
