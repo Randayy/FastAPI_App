@@ -27,10 +27,10 @@
     ```bash
     uvicorn app.main:app --reload
     
-або:
+ або:
 
-    ```bash
-    python -m app.main
+        ```bash
+        python -m app.main
 
 
     
