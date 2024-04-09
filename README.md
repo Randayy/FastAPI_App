@@ -21,7 +21,7 @@
 3. **Встановіть залежності**: Встановіть необхідні залежності за допомогою pip:
 
     
-    pip install -r requirements.txt or pip3 install -r requirements.txt
+    pip install -r requirements.txt | pip3 install -r requirements.txt
     
 
 4. **Запустіть додаток**: Запустіть додаток FastAPI за допомогою uvicorn:
