@@ -27,6 +27,8 @@
     ```bash
     uvicorn app.main:app --reload
     
+або:
+
     ```bash
     python -m app.main
 
