@@ -1,6 +1,6 @@
-fastapi
-redis
-types-redis
-uvicorn
-httpx
-pytest
+fastapi==0.70.0
+redis==4.0.0
+types-redis==4.6.0.1
+uvicorn==0.15.0
+httpx==0.23.0
+python-dotenv==1.0.1

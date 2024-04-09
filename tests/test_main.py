@@ -1,9 +1,12 @@
+import pytest
 from fastapi.testclient import TestClient
-from App.main import app
+from app.main import app
 
-client = TestClient(app)
+@pytest.fixture
+def client():
+    return TestClient(app)
 
-def test_health_check():
+def test_health_check(client):
     response = client.get("/")
     assert response.status_code == 200
     assert response.json() == { 
