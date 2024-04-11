@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-from .routers.health_check_route import router
-from .core.config import Settings
+from app.routers.health_check_route import router
+from app.core.config import Settings
 from fastapi.middleware.cors import CORSMiddleware
 
 settings = Settings()
