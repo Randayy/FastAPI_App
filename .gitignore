@@ -6,6 +6,7 @@ pycache/
 *.so
 
 .vscode/
+.postgres/
 *.log
 
 .env
