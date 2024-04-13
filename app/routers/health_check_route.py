@@ -7,7 +7,6 @@ router = APIRouter()
 @router.get("/")
 async def health_check():
     redis = await check_redis_connection()
-    # redis_status = await redis.ping()
     postgres = await check_connection()
     return { 
             "status_code": 200,
