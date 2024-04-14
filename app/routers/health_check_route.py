@@ -1,10 +1,9 @@
 from fastapi import APIRouter
-<<<<<<< Updated upstream
-=======
+
 import logging
 from app.db.connect_redis import check_redis_connection
 from app.db.connect_postgresql import check_connection
->>>>>>> Stashed changes
+
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s', filename='app.log')
 
