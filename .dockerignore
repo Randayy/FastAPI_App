@@ -1,5 +1,3 @@
-venv/
-
 *.pyc
 *.pyo
 pycache/
@@ -9,7 +7,7 @@ pycache/
 .postgres/
 *.log
 
-.env
+# .env
 *.ini
 *.conf
 *.yaml
@@ -18,4 +16,4 @@ pycache/
 *.pyc
 *.class
 
-.DS_Store  # для macOS
+.DS_Store
