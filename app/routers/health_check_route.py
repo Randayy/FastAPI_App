@@ -12,13 +12,6 @@ router = APIRouter()
 
 @router.get("/")
 async def health_check():
-<<<<<<< Updated upstream
-    return { 
-            "status_code": 200,
-            "detail": "ok",
-            "result": "working"
-            }
-=======
     logging.info("Health check started")
     redis = await check_redis_connection()
     postgres = await check_connection()
@@ -31,4 +24,3 @@ async def health_check():
             "postgres_status": f"{postgres}"
             }
 
->>>>>>> Stashed changes
