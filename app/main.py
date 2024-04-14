@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+
 from app.routers.health_check_route import router
 from app.core.config import Settings
 from fastapi.middleware.cors import CORSMiddleware
