@@ -14,11 +14,6 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
 
-
-class UserUpdate(UserBase):
-    pass
-
-
 class User(UserBase):
     id: int
 
@@ -26,23 +21,23 @@ class User(UserBase):
         orm_mode = True
 
 
-class SignInRequestModel(BaseModel):
+class SignInRequestSchema(BaseModel):
     username: str
     password: str
 
 
-class SignUpRequestModel(UserCreate):
+class SignUpRequestSchema(UserCreate):
     confirm_password: str
 
 
-class UserUpdateRequestModel(UserUpdate):
+class UserUpdateRequestSchema(UserBase):
     current_password: str
     new_password: str
 
 
-class UsersListResponse(BaseModel):
+class UsersListSchema(BaseModel):
     users: list[User]
 
 
-class UserDetailResponse(BaseModel):
+class UserDetailSchema(BaseModel):
     user: User

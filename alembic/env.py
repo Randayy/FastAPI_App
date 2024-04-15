@@ -6,7 +6,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
-from app.db.models import Base
+from app.db.base_models import Base
 from app.db.connect_postgresql import DATABASE_URL
 
 # this is the Alembic Config object, which provides
