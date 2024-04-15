@@ -6,6 +6,7 @@ import asyncio
 from app.core.config import Settings
 from sqlalchemy import text
 
+
 settings = Settings()
 
 DATABASE_URL = f"postgresql+asyncpg://{settings.db_user}:{settings.db_password}@{settings.db_host}:{settings.db_port}/{settings.db_name}"
@@ -23,4 +24,10 @@ async def check_connection():
             return f"Failed to connect to PostgreSQL server. Error: {str(e)}"
 
 
-result = asyncio.run(check_connection())
+async def main():
+    result = await check_connection()
+    print(result)
+
+result = asyncio.run(main())
+
+
