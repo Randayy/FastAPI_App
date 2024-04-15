@@ -15,6 +15,11 @@ engine = create_async_engine(DATABASE_URL, echo=True)
 
 async_session = sessionmaker(engine, class_=AsyncSession)
 
+async def get_session():
+   async with async_session() as session:
+        yield session
+
+
 async def check_connection():
     async with async_session() as session:
         try:
@@ -24,10 +29,10 @@ async def check_connection():
             return f"Failed to connect to PostgreSQL server. Error: {str(e)}"
 
 
-async def main():
-    result = await check_connection()
-    print(result)
+# async def main():
+#     session = await get_session()
+#     return session
 
-result = asyncio.run(main())
+# result = asyncio.run(main())
 
 
