@@ -4,17 +4,17 @@ from typing import List, Optional
 from pydantic import BaseModel, EmailStr, Field
 
 
-class UserBase(BaseModel):
+class UserBaseSchema(BaseModel):
     username: str
     email: EmailStr
     first_name: Optional[str] = None
     last_name: Optional[str] = None
 
 
-class UserCreate(UserBase):
+class UserCreateSchema(UserBaseSchema):
     password: str
 
-class User(UserBase):
+class UserBaseSchema(UserBaseSchema):
     id: int
 
     class Config:
@@ -26,18 +26,18 @@ class SignInRequestSchema(BaseModel):
     password: str
 
 
-class SignUpRequestSchema(UserCreate):
+class SignUpRequestSchema(UserCreateSchema):
     confirm_password: str
 
 
-class UserUpdateRequestSchema(UserBase):
+class UserUpdateRequestSchema(UserBaseSchema):
     current_password: str
     new_password: str
 
 
 class UsersListSchema(BaseModel):
-    users: list[User]
+    users: list[UserBaseSchema]
 
 
 class UserDetailSchema(BaseModel):
-    user: User
+    user: UserBaseSchema
