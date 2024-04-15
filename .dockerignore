@@ -1,0 +1,19 @@
+*.pyc
+*.pyo
+pycache/
+*.so
+
+.vscode/
+.postgres/
+*.log
+
+# .env
+*.ini
+*.conf
+*.yaml
+*.yml
+
+*.pyc
+*.class
+
+.DS_Store

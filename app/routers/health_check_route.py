@@ -1,4 +1,6 @@
 from fastapi import APIRouter
+from app.db.connect_redis import check_redis_connection
+from app.db.connect_postgresql import check_connection
 
 import logging
 from app.db.connect_redis import check_redis_connection
@@ -22,4 +24,3 @@ async def health_check():
             "redis_status": f"{redis}",
             "postgres_status": f"{postgres}"
             }
-

@@ -23,9 +23,11 @@ async def check_connection():
         except OperationalError as e:
             return f"Failed to connect to PostgreSQL server. Error: {str(e)}"
 
+
 async def main():
     result = await check_connection()
     print(result)
 
 result = asyncio.run(main())
+
 
