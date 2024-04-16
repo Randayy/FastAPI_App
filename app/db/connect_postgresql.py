@@ -1,5 +1,5 @@
 from sqlalchemy import create_engine
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import OperationalError
 import asyncio
@@ -13,11 +13,14 @@ DATABASE_URL = f"postgresql+asyncpg://{settings.db_user}:{settings.db_password}@
 
 engine = create_async_engine(DATABASE_URL, echo=True)
 
-async_session = sessionmaker(engine, class_=AsyncSession)
+async_session = async_sessionmaker(engine, class_=AsyncSession)
 
 async def get_session():
-   async with async_session() as session:
-        yield session
+    db = async_session()
+    try:
+        yield db
+    finally:
+        await db.close()
 
 
 async def check_connection():
