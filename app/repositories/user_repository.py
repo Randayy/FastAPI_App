@@ -34,6 +34,15 @@ class UserRepository:
 
         return users
     
+    async def get_users_list_paginated(self, page: int, limit: int) -> List[User]:
+        users = await self.db.execute(select(User).offset((page - 1) * limit).limit(limit))
+        users = users.scalars().all()
+
+        if not users:
+            raise HTTPException(status_code=404, detail=f"No users found at page {page}")
+
+        return users
+    
     async def delete_user(self, user_id: int) -> None:
         user = await self.get_user_by_id(user_id)
         if not user:

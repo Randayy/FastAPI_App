@@ -29,6 +29,11 @@ class UserService:
         users = await self.User_Repository.get_users_list()
         return users
     
+    async def get_users_list_paginated(self, page: int, limit: int) -> List[UserDetailSchema]:
+        users = await self.User_Repository.get_users_list_paginated(page, limit)
+
+        return users
+    
     async def delete_user(self, user_id: int) -> None:
         await self.User_Repository.delete_user(user_id)
         return None

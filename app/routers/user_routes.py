@@ -41,6 +41,13 @@ async def get_user_by_id(user_id: int, db: AsyncSession = Depends(get_session)):
     return await service.get_user_by_id(user_id)
 
 
+@user_router.get("/users/{page}/{limit}",response_model=UserListSchema)
+async def get_users_list(page: int,limit: int,db: AsyncSession = Depends(get_session)):
+    service = UserService(db)
+    
+    return {"message": f"Users from page {page}","users": await service.get_users_list_paginated(page, limit)}
+
+
 
 @user_router.get("/users/",response_model=UserListSchema)
 async def get_users_list(db: AsyncSession = Depends(get_session)):
