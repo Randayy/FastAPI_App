@@ -1,17 +1,17 @@
 from pydantic import BaseModel
 from typing import List, Optional
-
+from pydantic.fields import Field
 
 
 class UserSchema(BaseModel):
-    username: str
+    username: str = Field(..., min_length=6)
     email: str
     first_name: Optional[str] = None
     last_name: Optional[str] = None
 
 
 class SignUpRequestSchema(UserSchema):
-    password: str
+    password: str = Field(..., min_length=8)
 
 
 class SignInRequestSchema(BaseModel):
