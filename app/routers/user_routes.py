@@ -8,19 +8,20 @@ from sqlalchemy.sql import text
 from fastapi import HTTPException
 from fastapi import APIRouter
 from app.services.user_service import UserService
+from uuid import UUID
 
 
 user_router = APIRouter()
 
 
-@user_router.post("/user", response_model=SignUpRequestSchema)
+@user_router.post("/user", response_model=UserDetailSchema)
 async def create_user(user_data: SignUpRequestSchema, db: AsyncSession = Depends(get_session)):
     service = UserService(db)
     return await service.create_user(user_data)
 
 
 @user_router.get("/users/{user_id}", response_model=UserDetailSchema)
-async def get_user_by_id(user_id: int, db: AsyncSession = Depends(get_session)):
+async def get_user_by_id(user_id: UUID, db: AsyncSession = Depends(get_session)):
     service = UserService(db)
     return await service.get_user_by_id(user_id)
 
@@ -38,13 +39,13 @@ async def get_users_list(db: AsyncSession = Depends(get_session)):
 
 
 @user_router.delete("/user/{user_id}")
-async def delete_user(user_id: int, db: AsyncSession = Depends(get_session)):
+async def delete_user(user_id: UUID, db: AsyncSession = Depends(get_session)):
     service = UserService(db)
     await service.delete_user(user_id)
     return {"message": "User deleted successfully"}
 
 
 @user_router.put("/user/{user_id}")
-async def update_user(user_id: int, user_data: UserUpdateRequestSchema, db: AsyncSession = Depends(get_session)):
+async def update_user(user_id: UUID, user_data: UserUpdateRequestSchema, db: AsyncSession = Depends(get_session)):
     service = UserService(db)
     return await service.update_user(user_id, user_data.dict())

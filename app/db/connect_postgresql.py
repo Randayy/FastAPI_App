@@ -16,11 +16,8 @@ async_session = async_sessionmaker(engine, class_=AsyncSession)
 
 
 async def get_session():
-    db = async_session()
-    try:
-        yield db
-    finally:
-        await db.close()
+    async with async_session() as session:
+        yield session
 
 
 async def check_connection():
@@ -30,3 +27,4 @@ async def check_connection():
                 return f"Connected to PostgreSQL server"
         except OperationalError as e:
             return f"Failed to connect to PostgreSQL server. Error: {str(e)}"
+

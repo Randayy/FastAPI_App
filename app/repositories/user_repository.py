@@ -13,7 +13,7 @@ class UserRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def create_user(self, user_data: SignUpRequestSchema) -> SignUpRequestSchema:
+    async def create_user(self, user_data: dict) -> User:
         user = User(**user_data)
         self.db.add(user)
         await self.db.commit()

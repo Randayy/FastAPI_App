@@ -5,6 +5,7 @@ from app.schemas.user_schemas import SignUpRequestSchema, UserDetailSchema, User
 import bcrypt
 import logging
 from fastapi import HTTPException
+from app.db.user_models import User
 from uuid import UUID
 
 
@@ -12,9 +13,12 @@ class UserService:
     def __init__(self, db: AsyncSession):
         self.user_repository = UserRepository(db)
 
-    async def create_user(self, user_data: SignUpRequestSchema) -> SignUpRequestSchema:
+    async def create_user(self, user_data: SignUpRequestSchema) -> User:
+        if user_data.password != user_data.confirm_password:
+            raise HTTPException(status_code=400, detail="Passwords do not match")
         hashed_password = await self.hash_password(user_data.password)
         user_data_dict = user_data.dict()
+        user_data_dict.pop('confirm_password', None)
         user_data_dict['password'] = hashed_password
         user = await self.user_repository.create_user(user_data_dict)
         return user
