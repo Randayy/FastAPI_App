@@ -10,41 +10,40 @@ from uuid import UUID
 
 class UserService:
     def __init__(self, db: AsyncSession):
-        self.User_Repository = UserRepository(db)
+        self.user_repository = UserRepository(db)
 
     async def create_user(self, user_data: SignUpRequestSchema) -> SignUpRequestSchema:
         hashed_password = await self.hash_password(user_data.password)
         user_data_dict = user_data.dict()
         user_data_dict['password'] = hashed_password
-        user = await self.User_Repository.create_user(user_data_dict)
+        user = await self.user_repository.create_user(user_data_dict)
         return user
 
     async def get_user_by_id(self, user_id: UUID) -> UserDetailSchema:
-        user = await self.User_Repository.get_user_by_id(user_id)
+        user = await self.user_repository.get_user_by_id(user_id)
         return user
 
     async def get_users_list(self) -> List[UserDetailSchema]:
-        users = await self.User_Repository.get_users_list()
+        users = await self.user_repository.get_users_list()
         return users
 
     async def get_users_list_paginated(self, page: int, limit: int) -> List[UserDetailSchema]:
-        users = await self.User_Repository.get_users_list_paginated(page, limit)
+        users = await self.user_repository.get_users_list_paginated(page, limit)
         return users
 
     async def delete_user(self, user_id: UUID) -> None:
-        await self.User_Repository.delete_user(user_id)
+        await self.user_repository.delete_user(user_id)
         return None
 
     async def update_user(self, user_id: UUID, user_data: UserUpdateRequestSchema) -> UserDetailSchema:
-        user = await self.User_Repository.get_user_by_id(user_id)
+        user = await self.user_repository.get_user_by_id(user_id)
         current_password = user.password
-        user_data_entered = user_data
-        entered_password = user_data_entered['current_password']
+        entered_password = user_data['current_password']
 
         if not await self.verify_password(entered_password, current_password):
             raise HTTPException(status_code=400, detail="incorrect password")
 
-        updated_user = await self.User_Repository.update_user(user, user_data_entered)
+        updated_user = await self.user_repository.update_user(user, user_data)
         return updated_user
 
     async def hash_password(self, password: str) -> str:
