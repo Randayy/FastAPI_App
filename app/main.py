@@ -9,7 +9,6 @@ from fastapi_pagination import add_pagination
 settings = Settings()
 
 app = FastAPI(debug=settings.debug)
-add_pagination(app)
 
 app.include_router(router)
 app.include_router(user_router)

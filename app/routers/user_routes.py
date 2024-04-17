@@ -10,23 +10,10 @@ from app.db.password_hashing import hash_password, verify_password
 from fastapi import APIRouter
 from app.services.user_service import UserService
 import logging
-# fastapi_pagination-0.12.22
+
 
 user_router = APIRouter()
 
-
-# @user_router.post("/user")
-# async def create_user(user_data: SignUpRequestSchema, db: AsyncSession = Depends(get_session)):
-#     hashed_password = hash_password(user_data.password)
-#     user_data_dict = user_data.dict()
-#     user_data_dict['password'] = hashed_password
-#     user = User(**user_data_dict)
-#     db.add(user)
-#     await db.commit()
-#     await db.refresh(user)
-#     logging.info(f"User {user.username} created successfully")
-    
-#     return user
 
 @user_router.post("/user", response_model=SignUpRequestSchema)
 async def create_user(user_data: SignUpRequestSchema, db: AsyncSession = Depends(get_session)):

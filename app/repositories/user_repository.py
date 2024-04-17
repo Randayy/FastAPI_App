@@ -1,28 +1,34 @@
 from app.db.user_models import User
 from app.schemas.user_schemas import SignUpRequestSchema, UserUpdateRequestSchema, UserListSchema, UserDetailSchema
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional ,Type
+from typing import List
 from fastapi import HTTPException
 from sqlalchemy import select
-
+import logging
+from sqlalchemy.exc import DBAPIError
 class UserRepository:
 
     def __init__(self, db: AsyncSession):
         self.db = db
 
     async def create_user(self,user_data: SignUpRequestSchema) -> SignUpRequestSchema:
-        user = User(**user_data)
-        self.db.add(user)
-        await self.db.commit()
-        await self.db.refresh(user)
-        return user
+        try:
+            user = User(**user_data)
+            self.db.add(user)
+            await self.db.commit()
+            await self.db.refresh(user)
+            logging.info("User created")
+            return user
+        except DBAPIError as e:
+            raise HTTPException(status_code=400, detail=f"Trying to create user with not valid data")
+
     
     async def get_user_by_id(self, user_id: int) -> User:
         user = await self.db.get(User, user_id)
 
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        print("Found user:", user)
+        logging.info(f"User found with id {user_id}")
         return user
     
     async def get_users_list(self) -> List[User]:
@@ -31,7 +37,7 @@ class UserRepository:
 
         if not users:
             raise HTTPException(status_code=404, detail="No users found")
-
+        logging.info("Users found")
         return users
     
     async def get_users_list_paginated(self, page: int, limit: int) -> List[User]:
@@ -40,7 +46,7 @@ class UserRepository:
 
         if not users:
             raise HTTPException(status_code=404, detail=f"No users found at page {page}")
-
+        logging.info(f"Users found at page {page}")
         return users
     
     async def delete_user(self, user_id: int) -> None:
@@ -51,6 +57,7 @@ class UserRepository:
 
         await self.db.delete(user)
         await self.db.commit()
+        logging.info(f"User with id {user_id} deleted")
         return None
     
 
@@ -59,4 +66,5 @@ class UserRepository:
             setattr(user, key, value)
         await self.db.commit()
         await self.db.refresh(user)
+        logging.info(f"User with id {user.id} updated")
         return user
