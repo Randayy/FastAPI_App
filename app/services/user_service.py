@@ -44,6 +44,15 @@ class UserService:
         current_password = user.password
         entered_password = user_data['current_password']
 
+        check_username_exists = await self.user_repository.get_user_by_username(user_data['username'])
+        if check_username_exists:
+            raise HTTPException(status_code=400, detail="user with username already exists")
+        
+        check_email_exists = await self.user_repository.get_user_by_email(user_data['email'])
+        if check_email_exists:
+            raise HTTPException(status_code=400, detail="user with email already exists")
+
+
         if not await self.verify_password(entered_password, current_password):
             raise HTTPException(status_code=400, detail="incorrect password")
 

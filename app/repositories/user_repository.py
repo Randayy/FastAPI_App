@@ -23,7 +23,7 @@ class UserRepository:
 
     async def get_user_by_id(self, user_id: UUID) -> User:
         user = await self.db.get(User, user_id)
-        if not user and user != None:
+        if not user:
             raise HTTPException(status_code=404, detail="User not found")
         logging.info(f"User found with id {user_id}")
         return user
@@ -47,7 +47,7 @@ class UserRepository:
 
     async def delete_user(self, user_id: UUID) -> None:
         user = await self.get_user_by_id(user_id)
-        if not user and user != None:
+        if not user:
             raise HTTPException(status_code=404, detail="User not found")
         print("Deleting user:", user.username)
         await self.db.delete(user)
@@ -62,3 +62,17 @@ class UserRepository:
         await self.db.refresh(user)
         logging.info(f"User with id {user.id} updated")
         return user
+    
+    async def get_user_by_username(self, username: str) -> User:
+        user = await self.db.execute(select(User).where(User.username == username))
+        user = user.scalars().first()
+        if user:
+            return True
+        return False
+        
+    async def get_user_by_email(self, email: str) -> User:
+        user = await self.db.execute(select(User).where(User.email == email))
+        user = user.scalars().first()
+        if user:
+            return True
+        return False
