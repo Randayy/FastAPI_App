@@ -1,8 +1,7 @@
 from sqlalchemy import create_engine
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import OperationalError
-import asyncio
 from app.core.config import Settings
 from sqlalchemy import text
 
@@ -13,7 +12,13 @@ DATABASE_URL = f"postgresql+asyncpg://{settings.db_user}:{settings.db_password}@
 
 engine = create_async_engine(DATABASE_URL, echo=True)
 
-async_session = sessionmaker(engine, class_=AsyncSession)
+async_session = async_sessionmaker(engine, class_=AsyncSession)
+
+
+async def get_session():
+    async with async_session() as session:
+        yield session
+
 
 async def check_connection():
     async with async_session() as session:
@@ -22,12 +27,4 @@ async def check_connection():
                 return f"Connected to PostgreSQL server"
         except OperationalError as e:
             return f"Failed to connect to PostgreSQL server. Error: {str(e)}"
-
-
-async def main():
-    result = await check_connection()
-    print(result)
-
-result = asyncio.run(main())
-
 
