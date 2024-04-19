@@ -33,9 +33,9 @@ class UserUpdateRequestSchema(UserSchema):
 class UserDetailSchema(UserSchema):
     id: UUID
     class Config:
-        orm_mode = True
+        from_attributes=True
 
 class UserListSchema(BaseModel):
     users: List[UserDetailSchema]
     class Config:
-        orm_mode = True
+        from_attributes=True

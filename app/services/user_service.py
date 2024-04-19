@@ -1,7 +1,7 @@
 from typing import List, Optional
 from app.repositories.user_repository import UserRepository
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.schemas.user_schemas import SignUpRequestSchema, UserDetailSchema, UserUpdateRequestSchema
+from app.schemas.user_schemas import SignUpRequestSchema, UserDetailSchema, UserUpdateRequestSchema,UserListSchema
 import bcrypt
 import logging
 from fastapi import HTTPException
@@ -33,7 +33,7 @@ class UserService:
 
     async def get_users_list_paginated(self, page: int, limit: int) -> List[UserDetailSchema]:
         users = await self.user_repository.get_users_list_paginated(page, limit)
-        return users
+        return UserListSchema(users=[UserDetailSchema.from_orm(user) for user in users])
 
     async def delete_user(self, user_id: UUID) -> None:
         await self.user_repository.delete_user(user_id)
