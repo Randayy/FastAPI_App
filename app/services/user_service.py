@@ -1,12 +1,13 @@
 from typing import List, Optional
 from app.repositories.user_repository import UserRepository
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.schemas.user_schemas import SignUpRequestSchema, UserDetailSchema, UserUpdateRequestSchema,UserListSchema
+from app.schemas.user_schemas import SignUpRequestSchema, UserDetailSchema, UserUpdateRequestSchema, UserListSchema
 import bcrypt
 import logging
 from fastapi import HTTPException
 from app.db.user_models import User
 from uuid import UUID
+from app.utils.utils import verify_password, hash_password
 
 
 class UserService:
@@ -15,8 +16,9 @@ class UserService:
 
     async def create_user(self, user_data: SignUpRequestSchema) -> User:
         if user_data.password != user_data.confirm_password:
-            raise HTTPException(status_code=400, detail="Passwords do not match")
-        hashed_password = await self.hash_password(user_data.password)
+            raise HTTPException(
+                status_code=400, detail="Passwords do not match")
+        hashed_password = await hash_password(user_data.password)
         user_data_dict = user_data.dict()
         user_data_dict.pop('confirm_password', None)
         user_data_dict['password'] = hashed_password
@@ -46,23 +48,16 @@ class UserService:
 
         check_username_exists = await self.user_repository.get_user_by_username(user_data['username'])
         if check_username_exists:
-            raise HTTPException(status_code=400, detail="user with username already exists")
-        
+            raise HTTPException(
+                status_code=400, detail="user with username already exists")
+
         check_email_exists = await self.user_repository.get_user_by_email(user_data['email'])
         if check_email_exists:
-            raise HTTPException(status_code=400, detail="user with email already exists")
+            raise HTTPException(
+                status_code=400, detail="user with email already exists")
 
-
-        if not await self.verify_password(entered_password, current_password):
+        if not await verify_password(entered_password, current_password):
             raise HTTPException(status_code=400, detail="incorrect password")
 
         updated_user = await self.user_repository.update_user(user, user_data)
         return updated_user
-
-    async def hash_password(self, password: str) -> str:
-        hashed_password = bcrypt.hashpw(
-            password.encode('utf-8'), bcrypt.gensalt())
-        return hashed_password.decode('utf-8')
-
-    async def verify_password(self, plain_password: str, hashed_password: str) -> bool:
-        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
