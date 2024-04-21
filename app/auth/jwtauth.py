@@ -56,4 +56,4 @@ class JWTAuth():
         except jwt.JWTError:
             raise HTTPException(
                 status_code=403, detail="Could not validate credentials")
-        return await UserRepository.get_user_by_username(username)
+        return await self.user_repository.get_user_by_username(username)

@@ -54,3 +54,9 @@ async def login_for_token(form_data: Annotated[OAuth2PasswordRequestForm, Depend
     user = await auth.authenticate_user(form_data.username, form_data.password)
     access_token = await auth.create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
+
+@user_router.get("/me", response_model=UserDetailSchema)
+async def read_users_me(token: str, db: AsyncSession = Depends(get_session)):
+    auth = JWTAuth(db)
+    user = await auth.get_current_user(token)
+    return user

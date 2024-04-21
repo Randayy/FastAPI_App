@@ -27,4 +27,3 @@ async def check_connection():
                 return f"Connected to PostgreSQL server"
         except OperationalError as e:
             return f"Failed to connect to PostgreSQL server. Error: {str(e)}"
-
