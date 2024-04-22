@@ -9,3 +9,5 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: str | None = None
+    exp : int | None = None
+    sub: str | None = None
