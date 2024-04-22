@@ -10,7 +10,7 @@ from uuid import UUID
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import Annotated
 from app.db.user_models import User
-
+from app.auth.jwtauth import oauth2_scheme
 
 user_router = APIRouter()
 
@@ -58,5 +58,7 @@ async def login_for_token(form_data: Annotated[OAuth2PasswordRequestForm, Depend
 
 
 @user_router.get("/me", response_model=UserDetailSchema)
-async def read_users_me(current_user: UserDetailSchema = Depends(UserService.get_current_active_user)):
+async def read_users_me(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_session)):
+    service = UserService(db)
+    current_user = await service.get_current_active_user(token)
     return current_user

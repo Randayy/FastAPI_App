@@ -68,8 +68,8 @@ class UserRepository:
         user = user.scalars().first()
         return user
 
-    async def get_user_authorized(db: AsyncSession, username: str) -> User:
-        user = await db.execute(select(User).where(User.username == username))
+    async def get_user_authorized(self, username: str) -> User:
+        user = await self.db.execute(select(User).where(User.username == username))
         user = user.scalars().first()
         return user
 

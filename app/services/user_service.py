@@ -68,8 +68,6 @@ class UserService:
             raise HTTPException(
                 status_code=400, detail="user with email already exists")
 
-        print(current_password, entered_password)
-
         check = await verify_password(entered_password, current_password)
         if not check:
             raise HTTPException(status_code=400, detail="incorrect password")
@@ -81,7 +79,7 @@ class UserService:
         user = await self.user_repository.get_user_by_username(username)
         return user
 
-    async def authenticate_user(self, username: str, password: str):
+    async def authenticate_user(self, username: str, password: str) -> UserDetailSchema:
         user = await self.user_repository.get_user_by_username(username)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
@@ -92,7 +90,7 @@ class UserService:
             raise HTTPException(status_code=400, detail="incorrect password")
         return user
 
-    async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_session)):
+    async def get_current_user(self, token: str = Depends(oauth2_scheme)) -> UserDetailSchema:
         try:
             payload = jwt.decode(token, settings.secret_key,
                                  algorithms=[settings.jwt_algorithm])
@@ -106,10 +104,11 @@ class UserService:
         except JWTError:
             raise HTTPException(
                 status_code=401, detail="Token has expired")
-        user = await UserRepository.get_user_authorized(db, username=token_data.sub)
+        user = await self.user_repository.get_user_by_username(username=token_data.sub)
         if user is None:
             raise HTTPException(status_code=404, detail="User not found")
         return user
 
-    async def get_current_active_user(current_user: User = Depends(get_current_user)):
+    async def get_current_active_user(self, token: str) -> UserDetailSchema:
+        current_user = await self.get_current_user(token)
         return current_user
