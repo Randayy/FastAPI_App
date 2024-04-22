@@ -8,7 +8,14 @@ from fastapi import HTTPException
 from app.db.user_models import User
 from uuid import UUID
 from app.utils.utils import verify_password, hash_password
+from typing import Annotated
+from app.auth.jwtauth import oauth2_scheme
+from jose import jwt
+from fastapi import Depends
+from app.core.config import Settings
+from app.schemas.auth_schemas import TokenData
 
+settings = Settings()
 
 class UserService:
     def __init__(self, db: AsyncSession):
@@ -46,6 +53,7 @@ class UserService:
         current_password = user.password
         entered_password = user_data['current_password']
 
+
         check_username_exists = await self.user_repository.get_user_by_username(user_data['username'])
         if check_username_exists:
             raise HTTPException(
@@ -55,9 +63,46 @@ class UserService:
         if check_email_exists:
             raise HTTPException(
                 status_code=400, detail="user with email already exists")
+        
+        print(current_password, entered_password)
 
-        if not await verify_password(entered_password, current_password):
+        check = await verify_password(entered_password, current_password)
+        if not check:
             raise HTTPException(status_code=400, detail="incorrect password")
 
         updated_user = await self.user_repository.update_user(user, user_data)
         return updated_user
+    
+    async def get_user_by_username(self, username: str) -> User:
+        user = await self.user_repository.get_user_by_username(username)
+        return user
+    
+    async def authenticate_user(self, username: str, password: str):
+        user = await self.user_repository.get_user_by_username(username)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        entered_password = password
+        current_password = user.password
+        check = await verify_password(entered_password, current_password)
+        if not check:
+            raise HTTPException(status_code=400, detail="incorrect password")
+        return user
+    
+    async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+        try:
+            payload = jwt.decode(token, settings.secret_key,
+                                 algorithms=[settings.jwt_algorithm])
+            username: str = payload.get("sub")
+            if username is None:
+                raise HTTPException(
+                status_code=401, detail="No Username found in token")
+            token_data = TokenData(username=username)
+        except jwt.JWTError:
+            raise HTTPException(
+                status_code=401, detail="Could not validate credentials")
+        user = await UserService.get_user_by_username(token_data.username)
+        return user
+    
+    async def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)],):
+        return current_user
+
