@@ -1,5 +1,6 @@
 from sqlalchemy import Column, String
 from pydantic import BaseModel
+from uuid import UUID
 
 
 class Token(BaseModel):
@@ -8,6 +9,6 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    username: str | None = None
-    exp : int | None = None
     sub: str | None = None
+    exp: int | None = None
+    # sub: UUID | None = None

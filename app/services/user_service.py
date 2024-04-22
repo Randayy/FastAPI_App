@@ -12,10 +12,15 @@ from typing import Annotated
 from app.auth.jwtauth import oauth2_scheme
 from jose import jwt
 from fastapi import Depends
+from app.db.connect_postgresql import get_session
 from app.core.config import Settings
 from app.schemas.auth_schemas import TokenData
+from jose import JWTError
+from datetime import datetime
+
 
 settings = Settings()
+
 
 class UserService:
     def __init__(self, db: AsyncSession):
@@ -53,7 +58,6 @@ class UserService:
         current_password = user.password
         entered_password = user_data['current_password']
 
-
         check_username_exists = await self.user_repository.get_user_by_username(user_data['username'])
         if check_username_exists:
             raise HTTPException(
@@ -63,7 +67,7 @@ class UserService:
         if check_email_exists:
             raise HTTPException(
                 status_code=400, detail="user with email already exists")
-        
+
         print(current_password, entered_password)
 
         check = await verify_password(entered_password, current_password)
@@ -72,11 +76,11 @@ class UserService:
 
         updated_user = await self.user_repository.update_user(user, user_data)
         return updated_user
-    
+
     async def get_user_by_username(self, username: str) -> User:
         user = await self.user_repository.get_user_by_username(username)
         return user
-    
+
     async def authenticate_user(self, username: str, password: str):
         user = await self.user_repository.get_user_by_username(username)
         if not user:
@@ -87,22 +91,25 @@ class UserService:
         if not check:
             raise HTTPException(status_code=400, detail="incorrect password")
         return user
-    
-    async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+
+    async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_session)):
         try:
             payload = jwt.decode(token, settings.secret_key,
                                  algorithms=[settings.jwt_algorithm])
             username: str = payload.get("sub")
+            exp: int = payload.get("exp")
             if username is None:
                 raise HTTPException(
-                status_code=401, detail="No Username found in token")
-            token_data = TokenData(username=username)
-        except jwt.JWTError:
-            raise HTTPException(
-                status_code=401, detail="Could not validate credentials")
-        user = await UserService.get_user_by_username(token_data.username)
-        return user
-    
-    async def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)],):
-        return current_user
+                    status_code=401, detail="No Username found in token")
 
+            token_data = TokenData(sub=username, exp=exp)
+        except JWTError:
+            raise HTTPException(
+                status_code=401, detail="Token has expired")
+        user = await UserRepository.get_user_authorized(db, username=token_data.sub)
+        if user is None:
+            raise HTTPException(status_code=404, detail="User not found")
+        return user
+
+    async def get_current_active_user(current_user: User = Depends(get_current_user)):
+        return current_user

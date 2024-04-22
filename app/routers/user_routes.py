@@ -3,7 +3,7 @@ from fastapi import Depends
 from app.db.connect_postgresql import get_session
 from app.schemas.auth_schemas import Token
 from app.schemas.user_schemas import SignUpRequestSchema, UserUpdateRequestSchema, UserListSchema, UserDetailSchema
-from fastapi import APIRouter , HTTPException,status
+from fastapi import APIRouter, HTTPException, status
 from app.services.user_service import UserService
 from app.auth.jwtauth import JWTAuth
 from uuid import UUID
@@ -48,26 +48,15 @@ async def update_user(user_id: UUID, user_data: UserUpdateRequestSchema, db: Asy
     return user
 
 
-@user_router.post("/users/token")
+@user_router.post("/token")
 async def login_for_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: AsyncSession = Depends(get_session)) -> Token:
     auth = JWTAuth()
     service = UserService(db)
     user = await service.authenticate_user(form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token = await auth.create_access_token(data={"sub": user.username})
+    access_token = await auth.create_access_token({"sub": user.username})
     return Token(access_token=access_token, token_type="bearer")
 
+
 @user_router.get("/me", response_model=UserDetailSchema)
-# async def read_users_me(token: str, db: AsyncSession = Depends(get_session)):
-#     service = UserService(db)
-#     user = await service.get_current_user_with_token(token)
-#     return user
-async def read_users_me(
-    current_user: Annotated[UserDetailSchema, Depends(UserService.get_current_active_user)],
-):
+async def read_users_me(current_user: UserDetailSchema = Depends(UserService.get_current_active_user)):
     return current_user
