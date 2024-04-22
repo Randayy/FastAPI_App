@@ -9,7 +9,7 @@ from fastapi import Depends
 from fastapi import HTTPException
 from typing import Annotated
 from app.core.config import Settings
-from app.schemas.auth_schemas import TokenData
+from app.schemas.auth_schemas import Token
 import logging
 
 settings = Settings()
@@ -25,7 +25,7 @@ class JWTAuth():
         self.algorithm = settings.jwt_algorithm
         self.access_token_expire_minutes = settings.access_token_expire_minutes
 
-    async def create_access_token(self, data: dict) -> TokenData:
+    async def create_access_token(self, data: dict) -> Token:
         to_encode = data.copy()
         if self.access_token_expire_minutes:
             expire = datetime.utcnow() + timedelta(minutes=self.access_token_expire_minutes)
