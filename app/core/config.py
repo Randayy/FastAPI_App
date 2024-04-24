@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     auth0_secret_key: str
     auth0_algorithm: str
     auth0_domain: str
-    auth0_client_id: str
+    auth0_issuer: str
     auth0_audience: str
 
     class Config:

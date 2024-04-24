@@ -24,9 +24,12 @@ from jose import jwt
 
 
 settings = Settings()
+
+
 def decode_token(token: str):
     try:
-        payload = jwt.decode(token, key="2E3bOi78yjI0P1J3x5NfSsxZN1HkvsVY", algorithms=["HS256"], audience="https://testauth", issuer="https://romantestauth.eu.auth0.com/")
+        payload = jwt.decode(token, key=settings.auth0_secret_key, algorithms=[
+                             settings.auth0_algorithm], audience=settings.auth0_audience, issuer=settings.auth0_issuer)
         return payload
     except:
         raise HTTPException(
@@ -34,6 +37,5 @@ def decode_token(token: str):
             detail="Invalid token",
         )
 
+
 http_bearer = HTTPBearer()
-
-

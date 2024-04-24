@@ -80,7 +80,7 @@ class UserService:
     async def get_user_by_username(self, username: str) -> User:
         user = await self.user_repository.get_user_by_username(username)
         return user
-    
+
     async def get_user_by_email(self, email: str) -> User:
         user = await self.user_repository.get_user_by_email(email)
         return user
@@ -118,8 +118,8 @@ class UserService:
     async def get_current_active_user(self, token: str) -> UserDetailSchema:
         current_user = await self.get_current_user(token)
         return current_user
-    
-    async def get_current_user_from_token(self,token: HTTPAuthorizationCredentials):
+
+    async def get_current_user_from_token(self, token: HTTPAuthorizationCredentials) -> UserDetailSchema:
         try:
             current_user = decode_token(token)
         except:
@@ -133,26 +133,27 @@ class UserService:
                 detail="Invalid authentication credentials",
             )
         current_user_email = current_user.get("email")
+        # check if user exists with same email
+        # if not create a new user
         check_user_by_email = await self.get_user_by_email(current_user_email)
         if not check_user_by_email:
-            raise HTTPException(
-                status_code=404,
-                detail="User not found",
-            )
-            # new_user_data={
-            #     "username": current_user.get("email").split("@")[0],
-            #     "email":current_user.get("email"),
-            #     "password": "testpassword",
-            #     "confirm_password": "testpassword",
-            #     "first_name": current_user.get("email").split("@")[0],
-            #     "last_name": "yourlatname",
-            # }
-            # created_user = await self.create_user(SignUpRequestSchema(**new_user_data))
+            new_user_data = {
+                "username": current_user.get("email").split("@")[0],
+                "email": current_user.get("email"),
+                "password": "testpassword",
+                "confirm_password": "testpassword",
+                "first_name": current_user.get("email").split("@")[0],
+                "last_name": "yourlatname",
+            }
+            # Checking if there already exists a user with the same username
+            check_user_by_username = await self.get_user_by_username(new_user_data["username"])
+            if not check_user_by_username:
+                created_user = await self.create_user(SignUpRequestSchema(**new_user_data))
+            else:
+                new_user_data["username"] = new_user_data["username"] + "auth0"
+                created_user = await self.create_user(SignUpRequestSchema(**new_user_data))
         else:
-            raise HTTPException(
-                status_code=400,
-                detail="User with eamil already exists",
-            )
-
+            found_user = await self.get_user_by_email(current_user_email)
+            return found_user
 
         return created_user
