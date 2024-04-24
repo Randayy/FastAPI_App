@@ -17,8 +17,6 @@ from app.core.config import Settings
 from app.schemas.auth_schemas import TokenData
 from jose import JWTError
 from datetime import datetime
-from app.auth.auth0 import decode_token, http_bearer
-from fastapi.security import HTTPAuthorizationCredentials
 
 
 settings = Settings()
@@ -96,64 +94,50 @@ class UserService:
             raise HTTPException(status_code=400, detail="incorrect password")
         return user
 
-    async def get_current_user(self, token: str = Depends(oauth2_scheme)) -> UserDetailSchema:
-        try:
-            payload = jwt.decode(token, settings.secret_key,
-                                 algorithms=[settings.jwt_algorithm])
-            username: str = payload.get("sub")
-            exp: int = payload.get("exp")
-            if username is None:
-                raise HTTPException(
-                    status_code=401, detail="No Username found in token")
+    async def create_user_from_token(self, email: str) -> UserDetailSchema:
+        new_user_data = {
+            "username": email.split("@")[0],
+            "email": email,
+            "password": "testpassword",
+            "confirm_password": "testpassword",
+            "first_name": email.split("@")[0],
+            "last_name": "yourlatname",
+        }
+        check_user_by_username = await self.get_user_by_username(new_user_data["username"])
+        if not check_user_by_username:
+            created_user = await self.create_user(SignUpRequestSchema(**new_user_data))
+        else:
+            new_user_data["username"] = new_user_data["username"] + "auth0"
+            created_user = await self.create_user(SignUpRequestSchema(**new_user_data))
+        return created_user
 
-            token_data = TokenData(sub=username, exp=exp)
-        except JWTError:
+
+async def get_current_user_from_token(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_session)) -> UserDetailSchema:
+    try:
+        payload = jwt.decode(token.credentials, settings.auth0_secret_key,
+                             algorithms=[settings.jwt_algorithm], audience=settings.auth0_audience, issuer=settings.auth0_issuer)
+        username: str = payload.get("sub")
+        email: str = payload.get("email")
+        exp: int = payload.get("exp")
+        if username is None:
+            raise HTTPException(
+                status_code=401, detail="No Username found in token")
+        if email is None:
+            raise HTTPException(
+                status_code=401, detail="No Email found in token")
+
+        token_data = TokenData(sub=username, exp=exp, email=email)
+    except JWTError:
+        raise HTTPException(
+            status_code=401, detail="Token has expired")
+    old_user = await UserRepository(db).get_user_by_email(email=token_data.email)
+    if not old_user:
+        user_creation = await UserService.create_user_from_token(email=token_data.email)
+        return user_creation
+    else:
+        exp_date = datetime.fromtimestamp(token_data.exp)
+        current_date = datetime.now()
+        if current_date > exp_date:
             raise HTTPException(
                 status_code=401, detail="Token has expired")
-        user = await self.user_repository.get_user_by_username(username=token_data.sub)
-        if user is None:
-            raise HTTPException(status_code=404, detail="User not found")
-        return user
-
-    async def get_current_active_user(self, token: str) -> UserDetailSchema:
-        current_user = await self.get_current_user(token)
-        return current_user
-
-    async def get_current_user_from_token(self, token: HTTPAuthorizationCredentials) -> UserDetailSchema:
-        try:
-            current_user = decode_token(token)
-        except:
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid token",
-            )
-        if not current_user:
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid authentication credentials",
-            )
-        current_user_email = current_user.get("email")
-        # check if user exists with same email
-        # if not create a new user
-        check_user_by_email = await self.get_user_by_email(current_user_email)
-        if not check_user_by_email:
-            new_user_data = {
-                "username": current_user.get("email").split("@")[0],
-                "email": current_user.get("email"),
-                "password": "testpassword",
-                "confirm_password": "testpassword",
-                "first_name": current_user.get("email").split("@")[0],
-                "last_name": "yourlatname",
-            }
-            # Checking if there already exists a user with the same username
-            check_user_by_username = await self.get_user_by_username(new_user_data["username"])
-            if not check_user_by_username:
-                created_user = await self.create_user(SignUpRequestSchema(**new_user_data))
-            else:
-                new_user_data["username"] = new_user_data["username"] + "auth0"
-                created_user = await self.create_user(SignUpRequestSchema(**new_user_data))
-        else:
-            found_user = await self.get_user_by_email(current_user_email)
-            return found_user
-
-        return created_user
+        return old_user
