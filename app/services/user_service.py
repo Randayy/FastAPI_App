@@ -17,6 +17,8 @@ from app.core.config import Settings
 from app.schemas.auth_schemas import TokenData
 from jose import JWTError
 from datetime import datetime
+from app.auth.auth0 import decode_token, http_bearer
+from fastapi.security import HTTPAuthorizationCredentials
 
 
 settings = Settings()
@@ -78,6 +80,10 @@ class UserService:
     async def get_user_by_username(self, username: str) -> User:
         user = await self.user_repository.get_user_by_username(username)
         return user
+    
+    async def get_user_by_email(self, email: str) -> User:
+        user = await self.user_repository.get_user_by_email(email)
+        return user
 
     async def authenticate_user(self, username: str, password: str) -> UserDetailSchema:
         user = await self.user_repository.get_user_by_username(username)
@@ -112,3 +118,41 @@ class UserService:
     async def get_current_active_user(self, token: str) -> UserDetailSchema:
         current_user = await self.get_current_user(token)
         return current_user
+    
+    async def get_current_user_from_token(self,token: HTTPAuthorizationCredentials):
+        try:
+            current_user = decode_token(token)
+        except:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid token",
+            )
+        if not current_user:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid authentication credentials",
+            )
+        current_user_email = current_user.get("email")
+        check_user_by_email = await self.get_user_by_email(current_user_email)
+        if not check_user_by_email:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found",
+            )
+            # new_user_data={
+            #     "username": current_user.get("email").split("@")[0],
+            #     "email":current_user.get("email"),
+            #     "password": "testpassword",
+            #     "confirm_password": "testpassword",
+            #     "first_name": current_user.get("email").split("@")[0],
+            #     "last_name": "yourlatname",
+            # }
+            # created_user = await self.create_user(SignUpRequestSchema(**new_user_data))
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="User with eamil already exists",
+            )
+
+
+        return created_user

@@ -11,7 +11,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 from typing import Annotated
 from app.db.user_models import User
 from app.auth.jwtauth import oauth2_scheme
-
+from app.auth.auth0 import http_bearer
+from fastapi.security import HTTPAuthorizationCredentials
 user_router = APIRouter()
 
 
@@ -62,3 +63,12 @@ async def read_users_me(token: str = Depends(oauth2_scheme), db: AsyncSession = 
     service = UserService(db)
     current_user = await service.get_current_active_user(token)
     return current_user
+
+
+@user_router.get("/auth0/me")
+async def read_protected(token: HTTPAuthorizationCredentials = Depends(http_bearer),db: AsyncSession = Depends(get_session)):
+    service = UserService(db)
+    user = await service.get_current_user_from_token(token.credentials)
+    return user
+
+    

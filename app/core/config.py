@@ -21,5 +21,11 @@ class Settings(BaseSettings):
     jwt_algorithm: str
     access_token_expire_minutes: int 
 
+    auth0_secret_key: str
+    auth0_algorithm: str
+    auth0_domain: str
+    auth0_client_id: str
+    auth0_audience: str
+
     class Config:
         env_file = ".env"
