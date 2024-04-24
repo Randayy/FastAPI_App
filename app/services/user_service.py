@@ -95,11 +95,13 @@ class UserService:
         return user
 
     async def create_user_from_token(self, email: str) -> UserDetailSchema:
+        password_pref = 'auth0' + email.split("@")[0]
+        password = password_pref +"test"
         new_user_data = {
             "username": email.split("@")[0],
             "email": email,
-            "password": "testpassword",
-            "confirm_password": "testpassword",
+            "password": password,
+            "confirm_password": password,
             "first_name": email.split("@")[0],
             "last_name": "yourlatname",
         }
