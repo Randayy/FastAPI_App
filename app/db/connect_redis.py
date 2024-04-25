@@ -6,8 +6,6 @@ import aioredis
 settings = Settings()
 
 
-import aioredis
-
 class RedisClient:
 
     async def connect(self):
@@ -23,14 +21,17 @@ class RedisClient:
             await self.connect()
         return self._redis
 
+
 async def check_redis_connection():
     Redis_client = RedisClient()
     await Redis_client.connect()
     redis = await Redis_client.get_redis()
     if redis:
         return f"Connected to Redis server"
-    
+
 # Cheking if redis works
+
+
 async def store_data_in_redis():
     Redis_client = RedisClient()
     await Redis_client.connect()
@@ -39,6 +40,7 @@ async def store_data_in_redis():
     if redis:
         await redis.set('check', '111')
         print("Data stored")
+
 
 async def retrieve_data_from_redis():
     Redis_client = RedisClient()

@@ -62,12 +62,17 @@ class UserRepository:
         await self.db.refresh(user)
         logging.info(f"User with id {user.id} updated")
         return user
-    
+
     async def get_user_by_username(self, username: str) -> User:
         user = await self.db.execute(select(User).where(User.username == username))
         user = user.scalars().first()
         return user
-        
+
+    async def get_user_authorized(self, username: str) -> User:
+        user = await self.db.execute(select(User).where(User.username == username))
+        user = user.scalars().first()
+        return user
+
     async def get_user_by_email(self, email: str) -> User:
         user = await self.db.execute(select(User).where(User.email == email))
         user = user.scalars().first()

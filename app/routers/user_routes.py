@@ -1,17 +1,19 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
 from app.db.connect_postgresql import get_session
-from app.db.user_models import User
-from sqlalchemy import select
+from app.schemas.auth_schemas import Token
 from app.schemas.user_schemas import SignUpRequestSchema, UserUpdateRequestSchema, UserListSchema, UserDetailSchema
-from sqlalchemy.sql import text
-from fastapi import HTTPException
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
 from app.services.user_service import UserService
+from app.auth.jwtauth import JWTAuth
 from uuid import UUID
-
-
+from fastapi.security import OAuth2PasswordRequestForm
+from typing import Annotated
+from app.db.user_models import User
+from app.auth.jwtauth import oauth2_scheme
+from fastapi.security import HTTPAuthorizationCredentials
 user_router = APIRouter()
+from app.services.user_service import get_current_user_from_token
 
 
 @user_router.post("/users", response_model=UserDetailSchema)
@@ -45,3 +47,19 @@ async def update_user(user_id: UUID, user_data: UserUpdateRequestSchema, db: Asy
     service = UserService(db)
     user = await service.update_user(user_id, user_data.dict())
     return user
+
+
+@user_router.post("/token")
+async def login_for_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: AsyncSession = Depends(get_session)) -> Token:
+    auth = JWTAuth()
+    service = UserService(db)
+    user = await service.authenticate_user(form_data.username, form_data.password)
+    access_token = await auth.create_access_token({"sub": user.username,"email": user.email})
+    return Token(access_token=access_token, token_type="bearer")
+
+
+@user_router.get("/me", response_model=UserDetailSchema)
+async def read_users_me(db: AsyncSession = Depends(get_session),current_user: User = Depends(get_current_user_from_token)):
+    return current_user
+
+    

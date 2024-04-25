@@ -17,5 +17,15 @@ class Settings(BaseSettings):
     db_port: int
     db_name: str
 
+    secret_key: str
+    jwt_algorithm: str
+    access_token_expire_minutes: int 
+
+    auth0_secret_key: str
+    auth0_algorithm: str
+    auth0_domain: str
+    auth0_issuer: str
+    auth0_audience: str
+
     class Config:
         env_file = ".env"
