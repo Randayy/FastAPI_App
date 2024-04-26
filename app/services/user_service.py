@@ -30,10 +30,10 @@ async def get_current_user_from_token(token: str = Depends(oauth2_scheme), db: A
         username: str = payload.get("sub")
         email: str = payload.get("email")
         exp: int = payload.get("exp")
-        if username is None:
+        if not username:
             raise HTTPException(
                 status_code=401, detail="No Username found in token")
-        if email is None:
+        if not email:
             raise HTTPException(
                 status_code=401, detail="No Email found in token")
 
@@ -152,5 +152,4 @@ class UserService:
         if current_user_id != user_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail="You dont have permission to access this user")
-        else:
-            return True
+        
