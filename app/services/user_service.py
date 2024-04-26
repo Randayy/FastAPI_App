@@ -17,9 +17,41 @@ from app.core.config import Settings
 from app.schemas.auth_schemas import TokenData
 from jose import JWTError
 from datetime import datetime
+from fastapi import status
 
 
 settings = Settings()
+
+
+async def get_current_user_from_token(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_session)) -> UserDetailSchema:
+    try:
+        payload = jwt.decode(token.credentials, settings.auth0_secret_key,
+                             algorithms=[settings.jwt_algorithm], audience=settings.auth0_audience, issuer=settings.auth0_issuer)
+        username: str = payload.get("sub")
+        email: str = payload.get("email")
+        exp: int = payload.get("exp")
+        if not username:
+            raise HTTPException(
+                status_code=401, detail="No Username found in token")
+        if not email:
+            raise HTTPException(
+                status_code=401, detail="No Email found in token")
+
+        token_data = TokenData(sub=username, exp=exp, email=email)
+    except JWTError:
+        raise HTTPException(
+            status_code=401, detail="Token has expired")
+    old_user = await UserRepository(db).get_user_by_email(email=token_data.email)
+    if not old_user:
+        user_creation = await UserService.create_user_from_token(email=token_data.email)
+        return user_creation
+    else:
+        exp_date = datetime.fromtimestamp(token_data.exp)
+        current_date = datetime.now()
+        if current_date > exp_date:
+            raise HTTPException(
+                status_code=401, detail="Token has expired")
+        return old_user
 
 
 class UserService:
@@ -37,9 +69,12 @@ class UserService:
         user = await self.user_repository.create_user(user_data_dict)
         return user
 
-    async def get_user_by_id(self, user_id: UUID) -> UserDetailSchema:
+    async def get_user_by_id(self, user_id: UUID, current_user: User) -> UserDetailSchema:
         user = await self.user_repository.get_user_by_id(user_id)
-        return user
+        current_user_id = current_user.id
+        result = await self.check_user_permissions(user_id, current_user_id)
+        if result:
+            return user
 
     async def get_users_list(self) -> List[UserDetailSchema]:
         users = await self.user_repository.get_users_list()
@@ -49,12 +84,15 @@ class UserService:
         users = await self.user_repository.get_users_list_paginated(page, limit)
         return UserListSchema(users=[UserDetailSchema.from_orm(user) for user in users])
 
-    async def delete_user(self, user_id: UUID) -> None:
+    async def delete_user(self, user_id: UUID, current_user: User) -> None:
+        await self.check_user_permissions(user_id, current_user.id)
         await self.user_repository.delete_user(user_id)
         return None
 
-    async def update_user(self, user_id: UUID, user_data: UserUpdateRequestSchema) -> UserDetailSchema:
+    async def update_user(self, user_id: UUID, user_data: UserUpdateRequestSchema, current_user: User) -> UserDetailSchema:
+        await self.check_user_permissions(user_id, current_user.id)
         user = await self.user_repository.get_user_by_id(user_id)
+        
         current_password = user.password
         entered_password = user_data['current_password']
 
@@ -63,14 +101,10 @@ class UserService:
             raise HTTPException(
                 status_code=400, detail="user with username already exists")
 
-        check_email_exists = await self.user_repository.get_user_by_email(user_data['email'])
-        if check_email_exists:
-            raise HTTPException(
-                status_code=400, detail="user with email already exists")
-
         check = await verify_password(entered_password, current_password)
         if not check:
-            raise HTTPException(status_code=400, detail="incorrect password")
+            raise HTTPException(
+                status_code=400, detail="incorrect password")
 
         updated_user = await self.user_repository.update_user(user, user_data)
         return updated_user
@@ -96,7 +130,7 @@ class UserService:
 
     async def create_user_from_token(self, email: str) -> UserDetailSchema:
         password_pref = 'auth0' + email.split("@")[0]
-        password = password_pref +"test"
+        password = password_pref + "test"
         new_user_data = {
             "username": email.split("@")[0],
             "email": email,
@@ -113,33 +147,8 @@ class UserService:
             created_user = await self.create_user(SignUpRequestSchema(**new_user_data))
         return created_user
 
-
-async def get_current_user_from_token(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_session)) -> UserDetailSchema:
-    try:
-        payload = jwt.decode(token.credentials, settings.auth0_secret_key,
-                             algorithms=[settings.jwt_algorithm], audience=settings.auth0_audience, issuer=settings.auth0_issuer)
-        username: str = payload.get("sub")
-        email: str = payload.get("email")
-        exp: int = payload.get("exp")
-        if username is None:
-            raise HTTPException(
-                status_code=401, detail="No Username found in token")
-        if email is None:
-            raise HTTPException(
-                status_code=401, detail="No Email found in token")
-
-        token_data = TokenData(sub=username, exp=exp, email=email)
-    except JWTError:
-        raise HTTPException(
-            status_code=401, detail="Token has expired")
-    old_user = await UserRepository(db).get_user_by_email(email=token_data.email)
-    if not old_user:
-        user_creation = await UserService.create_user_from_token(email=token_data.email)
-        return user_creation
-    else:
-        exp_date = datetime.fromtimestamp(token_data.exp)
-        current_date = datetime.now()
-        if current_date > exp_date:
-            raise HTTPException(
-                status_code=401, detail="Token has expired")
-        return old_user
+    async def check_user_permissions(self, user_id: UUID, current_user_id: UUID) -> bool:
+        if current_user_id != user_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                detail="You dont have permission to access this user")
+        
