@@ -28,6 +28,7 @@ def upgrade() -> None:
         sa.Column('visible', sa.Boolean(), nullable=False),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('name'),
+        sa.ForeignKeyConstraint(['owner_id'], ['users.id']),
     )
 
 

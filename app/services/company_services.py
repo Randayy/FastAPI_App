@@ -32,17 +32,17 @@ class CompanyService:
         return CompanyListSchema(companies=[CompanyDetailSchema.from_orm(company) for company in companies])
 
     async def delete_company(self, company_id: UUID, current_user: User):
-        company = await self.company_repository.get_company_by_id(company_id)
-        if company.owner_id != current_user.id:
-            raise HTTPException(
-                status_code=401, detail="You are not authorized to delete this company")
+        await self.check_if_owner_of_company(company_id, current_user)
         await self.company_repository.delete_company(company_id)
         return {"message": "Company deleted successfully"}
 
     async def update_company(self, company_id: UUID, company_data: dict, current_user: User) -> CompanyDetailSchema:
-        company = await self.company_repository.get_company_by_id(company_id)
-        if company.owner_id != current_user.id:
-            raise HTTPException(
-                status_code=401, detail="You are not authorized to update this company")
+        await self.check_if_owner_of_company(company_id, current_user)
         company = await self.company_repository.update_company(company_id, company_data)
         return company
+    
+    async def check_if_owner_of_company(self, company_id: UUID, current_user: User):
+        company = await self.company_repository.get_company_for_owner(company_id)
+        if company.owner_id != current_user.id:
+            raise HTTPException(
+                status_code=401, detail="You are not authorized to update/delete this company")

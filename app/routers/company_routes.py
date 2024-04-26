@@ -11,11 +11,6 @@ from uuid import UUID
 
 company_router = APIRouter(tags=["Company"])
 
-# @company_router.get("/companies")
-# # async def get_companies(db: AsyncSession = Depends(get_session)):
-# #     companies = await company_service.get_companies_list()
-# #     return companies
-
 
 @company_router.post("/companies")
 async def create_company(company_data: CompanyCreateSchema, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
