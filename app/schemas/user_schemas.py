@@ -4,22 +4,20 @@ from pydantic.fields import Field
 from uuid import UUID
 
 
-class UserSchema(BaseModel):
-    username: str = Field(..., min_length=6,
-                          description="Username must be at least 6 characters long")
+class UserBaseSchema(BaseModel):
+    username: Optional[str] = Field(..., min_length=6,
+                                    description="Username must be at least 6 characters long")
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+
+
+class UserSchema(UserBaseSchema):
     email: str
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
+
 
 class UserBaseSchema(BaseModel):
     username: Optional[str] = Field(..., min_length=6,
-                          description="Username must be at least 6 characters long")
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-
-class UserBaseSchema(BaseModel):
-    username: Optional[str] = Field(..., min_length=6,
-                          description="Username must be at least 6 characters long")
+                                    description="Username must be at least 6 characters long")
     first_name: Optional[str] = None
     last_name: Optional[str] = None
 
