@@ -15,23 +15,19 @@ class CompanyRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def check_company(self, company: Company) -> bool:
-        if not company:
+    async def check_company(self, company_name: str) -> bool:
+        company_check = await self.db.execute(select(Company).where(Company.name == company_name))
+        if company_check:
             raise HTTPException(
-                status_code=404, detail="Company not found or not visible")
-        return True
+                status_code=404, detail="Company with name already exists")
 
     async def create_company(self, company_data: dict, current_user_id: UUID) -> Company:
+        await self.check_company(company_data["name"])
         company_data["owner_id"] = current_user_id
         company = Company(**company_data)
         self.db.add(company)
-        try:
-            await self.db.commit()
-            await self.db.refresh(company)
-        except IntegrityError:
-            raise HTTPException(
-                status_code=400, detail="Company already exists")
-
+        await self.db.commit()
+        await self.db.refresh(company)
         logging.info("Company created")
         return company
 
