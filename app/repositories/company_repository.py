@@ -36,15 +36,12 @@ class CompanyRepository:
         return company
 
     async def get_company_by_id(self, company_id: UUID) -> Company:
-        company = await self.db.get(Company, company_id)
-        if not company:
-            raise HTTPException(status_code=404, detail="Company not found")
+        company = await self.get_company_without_visability(company_id)
         if not company.visible == True:
             raise HTTPException(status_code=404, detail="Company not visible")
-        logging.info(f"Company found with id {company_id}")
         return company
 
-    async def get_company_for_owner(self, company_id: UUID) -> Company:
+    async def get_company_without_visability(self, company_id: UUID) -> Company:
         company = await self.db.get(Company, company_id)
         if not company:
             raise HTTPException(status_code=404, detail="Company not found")
@@ -61,14 +58,14 @@ class CompanyRepository:
         return companies
 
     async def delete_company(self, company_id: UUID) -> None:
-        company = await self.get_company_for_owner(company_id)
+        company = await self.get_company_without_visability(company_id)
         await self.db.delete(company)
         await self.db.commit()
         logging.info(f"Company with id {company_id} deleted")
         return None
 
     async def update_company(self, company_id: UUID, company_data: dict) -> Company:
-        company = await self.get_company_for_owner(company_id)
+        company = await self.get_company_without_visability(company_id)
         for key, value in company_data.items():
             setattr(company, key, value)
         await self.db.commit()
