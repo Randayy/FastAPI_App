@@ -1,0 +1,64 @@
+from app.db.company_models import Company
+from app.schemas.user_schemas import SignUpRequestSchema, UserUpdateRequestSchema, UserListSchema, UserDetailSchema
+from sqlalchemy.ext.asyncio import AsyncSession
+from typing import List
+from fastapi import HTTPException
+from sqlalchemy import select
+import logging
+from sqlalchemy.exc import DBAPIError
+from uuid import UUID
+from asyncpg.exceptions import UniqueViolationError
+from sqlalchemy.exc import IntegrityError
+
+
+class CompanyRepository:
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def create_company(self, company_data: dict, current_user_id: UUID) -> Company:
+        company_data["owner_id"] = current_user_id
+        company = Company(**company_data)
+        self.db.add(company)
+        try:
+            await self.db.commit()
+            await self.db.refresh(company)
+        except IntegrityError:
+            raise HTTPException(
+                status_code=400, detail="Company already exists")
+
+        logging.info("Company created")
+        return company
+
+    async def get_company_by_id(self, company_id: UUID) -> Company:
+        company = await self.db.get(Company, company_id)
+        if not company:
+            raise HTTPException(status_code=404, detail="Company not found")
+        logging.info(f"Company found with id {company_id}")
+        return company
+
+    async def get_company_list_paginated(self, page: int, limit: int) -> List[Company]:
+        companies = await self.db.execute(select(Company).where(Company.visible == True).offset((page - 1) * limit).limit(limit))
+        companies = companies.scalars().all()
+        if not companies and companies != []:
+            raise HTTPException(status_code=404, detail="No companies found")
+        logging.info("Companies found")
+        return companies
+
+    async def delete_company(self, company_id: UUID) -> None:
+        company = await self.get_company_by_id(company_id)
+        if not company:
+            raise HTTPException(status_code=404, detail="Company not found")
+        await self.db.delete(company)
+        await self.db.commit()
+        logging.info(f"Company with id {company_id} deleted")
+        return None
+
+    async def update_company(self, company_id: UUID, company_data: dict) -> Company:
+        company = await self.get_company_by_id(company_id)
+        if not company:
+            raise HTTPException(status_code=404, detail="Company not found")
+        for key, value in company_data.items():
+            setattr(company, key, value)
+        await self.db.commit()
+        await self.db.refresh(company)
+        return company

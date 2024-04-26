@@ -11,6 +11,11 @@ class UserSchema(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
 
+class UserBaseSchema(BaseModel):
+    username: Optional[str] = Field(..., min_length=6,
+                          description="Username must be at least 6 characters long")
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
 
 class UserBaseSchema(BaseModel):
     username: Optional[str] = Field(..., min_length=6,

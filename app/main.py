@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from app.routers.health_check_route import health_check_router
 from app.routers.user_routes import user_router
+from app.routers.company_routes import company_router
 from app.core.config import Settings
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -9,8 +10,9 @@ settings = Settings()
 
 app = FastAPI(debug=settings.debug)
 
-app.include_router(health_check_router)
-app.include_router(user_router)
+app.include_router(health_check_router,tags=["Health Check"])
+app.include_router(user_router,tags=["User"])
+app.include_router(company_router,tags=["Company"])
 
 app.add_middleware(
     CORSMiddleware,
