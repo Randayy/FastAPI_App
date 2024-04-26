@@ -15,9 +15,10 @@ class CompanyRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def check_company(self, company:Company) -> bool:
+    async def check_company(self, company: Company) -> bool:
         if not company:
-            raise HTTPException(status_code=404, detail="Company not found or not visible")
+            raise HTTPException(
+                status_code=404, detail="Company not found or not visible")
         return True
 
     async def create_company(self, company_data: dict, current_user_id: UUID) -> Company:
@@ -42,7 +43,7 @@ class CompanyRepository:
             raise HTTPException(status_code=404, detail="Company not visible")
         logging.info(f"Company found with id {company_id}")
         return company
-    
+
     async def get_company_for_owner(self, company_id: UUID) -> Company:
         company = await self.db.get(Company, company_id)
         if not company:
@@ -54,7 +55,8 @@ class CompanyRepository:
         companies = await self.db.execute(select(Company).where(Company.visible == True).offset((page - 1) * limit).limit(limit))
         companies = companies.scalars().all()
         if not companies:
-            raise HTTPException(status_code=404, detail="No companies found or invisible")
+            raise HTTPException(
+                status_code=404, detail="No companies found or invisible")
         logging.info("Companies found")
         return companies
 

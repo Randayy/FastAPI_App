@@ -40,7 +40,7 @@ class CompanyService:
         await self.check_if_owner_of_company(company_id, current_user)
         company = await self.company_repository.update_company(company_id, company_data)
         return company
-    
+
     async def check_if_owner_of_company(self, company_id: UUID, current_user: User):
         company = await self.company_repository.get_company_for_owner(company_id)
         if company.owner_id != current_user.id:
