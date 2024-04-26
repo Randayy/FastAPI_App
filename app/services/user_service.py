@@ -85,30 +85,29 @@ class UserService:
         return UserListSchema(users=[UserDetailSchema.from_orm(user) for user in users])
 
     async def delete_user(self, user_id: UUID, current_user: User) -> None:
-        result = await self.check_user_permissions(user_id, current_user.id)
-        if result:
-            await self.user_repository.delete_user(user_id)
-            return None
+        await self.check_user_permissions(user_id, current_user.id)
+        await self.user_repository.delete_user(user_id)
+        return None
 
     async def update_user(self, user_id: UUID, user_data: UserUpdateRequestSchema, current_user: User) -> UserDetailSchema:
-        result = await self.check_user_permissions(user_id, current_user.id)
+        await self.check_user_permissions(user_id, current_user.id)
         user = await self.user_repository.get_user_by_id(user_id)
-        if result:
-            current_password = user.password
-            entered_password = user_data['current_password']
+        
+        current_password = user.password
+        entered_password = user_data['current_password']
 
-            check_username_exists = await self.user_repository.get_user_by_username(user_data['username'])
-            if check_username_exists:
-                raise HTTPException(
-                    status_code=400, detail="user with username already exists")
+        check_username_exists = await self.user_repository.get_user_by_username(user_data['username'])
+        if check_username_exists:
+            raise HTTPException(
+                status_code=400, detail="user with username already exists")
 
-            check = await verify_password(entered_password, current_password)
-            if not check:
-                raise HTTPException(
-                    status_code=400, detail="incorrect password")
+        check = await verify_password(entered_password, current_password)
+        if not check:
+            raise HTTPException(
+                status_code=400, detail="incorrect password")
 
-            updated_user = await self.user_repository.update_user(user, user_data)
-            return updated_user
+        updated_user = await self.user_repository.update_user(user, user_data)
+        return updated_user
 
     async def get_user_by_username(self, username: str) -> User:
         user = await self.user_repository.get_user_by_username(username)
