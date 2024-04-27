@@ -42,7 +42,7 @@ class CompanyService:
         return company
 
     async def check_if_owner_of_company(self, company_id: UUID, current_user: User):
-        company = await self.company_repository.get_company_for_owner(company_id)
+        company = await self.company_repository.get_company_without_visability(company_id)
         if company.owner_id != current_user.id:
             raise HTTPException(
                 status_code=401, detail="You are not authorized to update/delete this company")

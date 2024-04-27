@@ -67,3 +67,6 @@ class CompanyRepository:
         await self.db.commit()
         await self.db.refresh(company)
         return company
+
+        
+        
