@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
 from app.db.connect_postgresql import get_session
 from app.schemas.auth_schemas import Token
-from app.schemas.user_schemas import SignUpRequestSchema, UserUpdateRequestSchema, UserListSchema, UserDetailSchema
+from app.schemas.user_schemas import SignUpRequestSchema, UserUpdateRequestSchema, UserListSchema, UserDetailSchema,UserInvitationListSchema
 from fastapi import APIRouter, HTTPException, status
 from app.services.user_service import UserService
 from app.auth.jwtauth import JWTAuth
@@ -64,3 +64,10 @@ async def login_for_token(form_data: Annotated[OAuth2PasswordRequestForm, Depend
 @user_router.get("/me", response_model=UserDetailSchema)
 async def read_users_me(db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
     return UserDetailSchema(**current_user.__dict__)
+
+
+@user_router.get("/my_invitations", response_model=UserInvitationListSchema)
+async def get_my_invitations(db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
+    service = UserService(db)
+    invitations = await service.get_my_invitations(current_user)
+    return invitations

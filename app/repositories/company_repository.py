@@ -1,14 +1,16 @@
-from app.db.company_models import Company
+from app.db.user_models import Company
 from app.schemas.user_schemas import SignUpRequestSchema, UserUpdateRequestSchema, UserListSchema, UserDetailSchema
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from fastapi import HTTPException
 from sqlalchemy import select
+from app.db.user_models import User
 import logging
 from sqlalchemy.exc import DBAPIError
 from uuid import UUID
 from asyncpg.exceptions import UniqueViolationError
 from sqlalchemy.exc import IntegrityError
+from app.db.user_models import Invitations, InvitationStatus ,Company_Members
 
 
 class CompanyRepository:
@@ -16,10 +18,12 @@ class CompanyRepository:
         self.db = db
 
     async def check_company(self, company_name: str) -> bool:
+
         company_check = await self.db.execute(select(Company).where(Company.name == company_name))
+        company_check = company_check.scalars().first()
         if company_check:
             raise HTTPException(
-                status_code=404, detail="Company with name already exists")
+                status_code=404, detail=f"Company with name already exists")
 
     async def create_company(self, company_data: dict, current_user_id: UUID) -> Company:
         await self.check_company(company_data["name"])
@@ -67,6 +71,119 @@ class CompanyRepository:
         await self.db.commit()
         await self.db.refresh(company)
         return company
+    
+    async def invite_user_to_company(self, company_id: UUID, user_id: UUID) -> None:
+        company = await self.get_company_without_visability(company_id)
+        user = await self.db.get(User, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        company_id = company.id
+        user_id = user.id
+        invitation_creation = Invitations(company_id=company_id, user_id=user_id, status=InvitationStatus.PENDING)
+        self.db.add(invitation_creation)
+        await self.db.commit()
+        await self.db.refresh(invitation_creation)
+        logging.info("User invited to company")
+        return None
+    
+    async def cancel_invitation(self, company_id: UUID, user_id: UUID) -> None:
+        invitation = await self.db.execute(select(Invitations).where(Invitations.company_id == company_id).where(Invitations.user_id == user_id))
+        invitation = invitation.scalars().first()
+        if not invitation:
+            raise HTTPException(status_code=404, detail="Invitation not found")
+        await self.db.delete(invitation)
+        await self.db.commit()
+        logging.info("Invitation cancelled")
+        return None
+    
+    async def check_if_user_is_member_of_company_for_deleting(self, company_id: UUID, user_id: UUID) -> None:
+        company_member = await self.db.execute(select(Company_Members).where(Company_Members.company_id == company_id).where(Company_Members.user_id == user_id))
+        company_member = company_member.scalars().first()
+        return company_member
 
+    
+    async def check_if_user_is_member_of_company(self, company_id: UUID, user_id: UUID) -> None:
+        company_member = await self.check_if_user_is_member_of_company_for_deleting(company_id, user_id)
+        if company_member:
+            raise HTTPException(status_code=404, detail="User already member of company")
+        return None
+    
+    async def check_if_user_invited_already(self, company_id: UUID, user_id: UUID) -> None:
+        invitation = await self.db.execute(select(Invitations).where(Invitations.company_id == company_id).where(Invitations.user_id == user_id))
+        invitation = invitation.scalars().first()
+        if invitation:
+            raise HTTPException(status_code=404, detail="User already invited")
+        return None
+    
+    async def accept_invitation(self, company_id: UUID, current_user: User) -> None:
+        invitation = await self.db.execute(select(Invitations).where(Invitations.company_id == company_id).where(Invitations.user_id == current_user.id))
+        invitation = invitation.scalars().first()
+        if not invitation:
+            raise HTTPException(status_code=404, detail="Invitation not found")
+        if invitation.status == InvitationStatus.PENDING:
+            invitation.status = InvitationStatus.ACCEPTED
+            company_member_adding = Company_Members(company_id=company_id, user_id=current_user.id)
+            self.db.add(company_member_adding)
+            await self.db.commit()
+            await self.db.refresh(company_member_adding)
+            logging.info("Invitation accepted")
+            return None
+        else:
+            raise HTTPException(status_code=404, detail="Invitation already accepted")
         
+    async def reject_invitation(self, company_id: UUID, current_user: User) -> None:
+        invitation = await self.db.execute(select(Invitations).where(Invitations.company_id == company_id).where(Invitations.user_id == current_user.id))
+        invitation = invitation.scalars().first()
+        if not invitation:
+            raise HTTPException(status_code=404, detail="Invitation not found")
+        if invitation.status == InvitationStatus.PENDING:
+            invitation.status = InvitationStatus.REJECTED
+            await self.db.commit()
+            logging.info("Invitation rejected")
+            return None
+        else:
+            raise HTTPException(status_code=404, detail="Invitation already accepted")
         
+
+    async def delete_user_from_company(self, company_id: UUID, user_id: UUID) -> None:
+        company_member = await self.db.execute(select(Company_Members).where(Company_Members.company_id == company_id).where(Company_Members.user_id == user_id))
+        company_member = company_member.scalars().first()
+        if not company_member:
+            raise HTTPException(status_code=404, detail="User not member of company")
+        await self.db.delete(company_member)
+        await self.db.commit()
+        await self.db.refresh(company_member)
+        await self.cancel_invitation(company_id, user_id)
+        logging.info("User deleted from company")
+        return None
+    
+        
+    
+    async def exit_from_company(self, company_id: UUID, current_user: User) -> None:
+        company_member = await self.db.execute(select(Company_Members).where(Company_Members.company_id == company_id).where(Company_Members.user_id == current_user.id))
+        company_member = company_member.scalars().first()
+        if not company_member:
+            raise HTTPException(status_code=404, detail="User not member of company")
+        await self.db.delete(company_member)
+        await self.db.commit()
+        logging.info("User exited from company")
+        return None
+    
+    async def get_invited_users(self, company_id: UUID):
+        invited_users = await self.db.execute(select(Invitations.user_id).where(Invitations.company_id == company_id))
+        invited_users = invited_users.scalars().all()
+        if not invited_users:
+            raise HTTPException(status_code=404, detail="No invited users found")
+        return invited_users
+    
+    async def get_company_members(self, company_id: UUID):
+        company_members = await self.db.execute(select(Company_Members.user_id).where(Company_Members.company_id == company_id))
+        company_members = company_members.scalars().all()
+        if not company_members:
+            raise HTTPException(status_code=404, detail="No members found")
+        return company_members
+        
+
+    
+
+    

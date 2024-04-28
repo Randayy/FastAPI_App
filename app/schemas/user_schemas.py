@@ -2,6 +2,9 @@ from pydantic import BaseModel, validator
 from typing import List, Optional
 from pydantic.fields import Field
 from uuid import UUID
+from enum import Enum
+from sqlalchemy import Enum as EnumC
+from app.db.user_models import InvitationStatus
 
 
 class UserBaseSchema(BaseModel):
@@ -58,6 +61,22 @@ class UserDetailSchema(UserSchema):
 
 class UserListSchema(BaseModel):
     users: List[UserDetailSchema]
+
+    class Config:
+        from_attributes = True
+
+
+class UserInvitationSchema(BaseModel):
+    company_id: UUID
+    user_id: UUID
+    status: Enum
+
+    class Config:
+        from_attributes = True
+
+
+class UserInvitationListSchema(BaseModel):
+    invitations: List[UserInvitationSchema]
 
     class Config:
         from_attributes = True
