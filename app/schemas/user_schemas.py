@@ -81,6 +81,7 @@ class UserInvitationListSchema(BaseModel):
     class Config:
         from_attributes = True
 
+
 class UserRequestSchema(BaseModel):
     company_id: UUID
     user_id: UUID

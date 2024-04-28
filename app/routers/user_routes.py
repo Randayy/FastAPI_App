@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
 from app.db.connect_postgresql import get_session
 from app.schemas.auth_schemas import Token
-from app.schemas.user_schemas import SignUpRequestSchema, UserUpdateRequestSchema, UserListSchema, UserDetailSchema,UserInvitationListSchema
+from app.schemas.user_schemas import SignUpRequestSchema, UserUpdateRequestSchema, UserListSchema, UserDetailSchema, UserInvitationListSchema
 from fastapi import APIRouter, HTTPException, status
 from app.services.user_service import UserService
 from app.auth.jwtauth import JWTAuth
@@ -71,6 +71,7 @@ async def get_my_invitations(db: AsyncSession = Depends(get_session), current_us
     service = UserService(db)
     invitations = await service.get_my_invitations(current_user)
     return invitations
+
 
 @user_router.post("/my_requests")
 async def get_my_requests(db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
