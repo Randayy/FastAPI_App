@@ -61,6 +61,9 @@ class CompanyService:
     async def check_if_user_invited_already(self, company_id: UUID, user_id: UUID):
         await self.company_repository.check_if_user_invited_already(company_id, user_id)
 
+    async def check_if_user_requested_already(self, company_id: UUID, user_id: UUID):
+        await self.company_repository.check_if_user_requested_already(company_id, user_id)
+
 
     async def invite_user_to_company(self, company_id: UUID, user_id: UUID, current_user: User):
         await self.check_if_owner_of_company(company_id, current_user)
@@ -102,8 +105,37 @@ class CompanyService:
         users = await self.company_repository.get_invited_users(company_id)
         return users
     
+    async def get_requested_users(self, company_id: UUID, current_user: User):
+        await self.check_if_owner_of_company(company_id, current_user)
+        users = await self.company_repository.get_requested_users(company_id)
+        return users
+    
+    
+    
     async def get_company_members(self, company_id: UUID, current_user: User):
         await self.check_if_owner_of_company(company_id, current_user)
         users = await self.company_repository.get_company_members(company_id)
         return users
+    
+
+    async def send_join_request(self, company_id: UUID, current_user: User) -> None:
+        await self.check_if_user_is_member_of_company(company_id, current_user.id)
+        await self.check_if_user_invited_already(company_id, current_user.id)
+        await self.check_if_user_requested_already(company_id, current_user.id)
+        await self.company_repository.send_join_request(company_id, current_user.id)
+        return None
+    
+    async def cancel_join_request(self, company_id: UUID, current_user: User) -> None:
+        await self.company_repository.cancel_join_request(company_id, current_user.id)
+        return None
+    
+    async def accept_join_request(self, company_id: UUID, user_id: UUID, current_user: User) -> None:
+        await self.check_if_owner_of_company(company_id, current_user)
+        await self.company_repository.accept_join_request(company_id, user_id)
+        return None
+    
+    async def reject_join_request(self, company_id: UUID, user_id: UUID, current_user: User) -> None:
+        await self.check_if_owner_of_company(company_id, current_user)
+        await self.company_repository.reject_join_request(company_id, user_id)
+        return None
     

@@ -1,4 +1,4 @@
-from app.db.user_models import Company
+from app.db.user_models import Company ,Invitations, InviteStatus,RequestsStatus, Company_Members ,Requests
 from app.schemas.user_schemas import SignUpRequestSchema, UserUpdateRequestSchema, UserListSchema, UserDetailSchema
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
@@ -10,7 +10,8 @@ from sqlalchemy.exc import DBAPIError
 from uuid import UUID
 from asyncpg.exceptions import UniqueViolationError
 from sqlalchemy.exc import IntegrityError
-from app.db.user_models import Invitations, InvitationStatus ,Company_Members
+from app.db.user_models import Invitations, InviteStatus ,Company_Members
+from sqlalchemy.sql import text
 
 
 class CompanyRepository:
@@ -73,13 +74,14 @@ class CompanyRepository:
         return company
     
     async def invite_user_to_company(self, company_id: UUID, user_id: UUID) -> None:
+        await self.db.execute(text('DROP TYPE IF EXISTS invitation_status;'))
         company = await self.get_company_without_visability(company_id)
         user = await self.db.get(User, user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         company_id = company.id
         user_id = user.id
-        invitation_creation = Invitations(company_id=company_id, user_id=user_id, status=InvitationStatus.PENDING)
+        invitation_creation = Invitations(company_id=company_id, user_id=user_id, status=InviteStatus.PENDING)
         self.db.add(invitation_creation)
         await self.db.commit()
         await self.db.refresh(invitation_creation)
@@ -115,13 +117,20 @@ class CompanyRepository:
             raise HTTPException(status_code=404, detail="User already invited")
         return None
     
+    async def check_if_user_requested_already(self, company_id: UUID, user_id: UUID) -> None:
+        request = await self.db.execute(select(Requests).where(Requests.company_id == company_id).where(Requests.user_id == user_id))
+        request = request.scalars().first()
+        if request:
+            raise HTTPException(status_code=404, detail="User already requested")
+        return None
+    
     async def accept_invitation(self, company_id: UUID, current_user: User) -> None:
         invitation = await self.db.execute(select(Invitations).where(Invitations.company_id == company_id).where(Invitations.user_id == current_user.id))
         invitation = invitation.scalars().first()
         if not invitation:
             raise HTTPException(status_code=404, detail="Invitation not found")
-        if invitation.status == InvitationStatus.PENDING:
-            invitation.status = InvitationStatus.ACCEPTED
+        if invitation.status == InviteStatus.PENDING:
+            invitation.status = InviteStatus.ACCEPTED
             company_member_adding = Company_Members(company_id=company_id, user_id=current_user.id)
             self.db.add(company_member_adding)
             await self.db.commit()
@@ -136,8 +145,8 @@ class CompanyRepository:
         invitation = invitation.scalars().first()
         if not invitation:
             raise HTTPException(status_code=404, detail="Invitation not found")
-        if invitation.status == InvitationStatus.PENDING:
-            invitation.status = InvitationStatus.REJECTED
+        if invitation.status == InviteStatus.PENDING:
+            invitation.status = InviteStatus.REJECTED
             await self.db.commit()
             logging.info("Invitation rejected")
             return None
@@ -176,6 +185,13 @@ class CompanyRepository:
             raise HTTPException(status_code=404, detail="No invited users found")
         return invited_users
     
+    async def get_requested_users(self, company_id: UUID):
+        requested_users = await self.db.execute(select(Requests.user_id).where(Requests.company_id == company_id))
+        requested_users = requested_users.scalars().all()
+        if not requested_users:
+            raise HTTPException(status_code=404, detail="No requested users found")
+        return requested_users
+    
     async def get_company_members(self, company_id: UUID):
         company_members = await self.db.execute(select(Company_Members.user_id).where(Company_Members.company_id == company_id))
         company_members = company_members.scalars().all()
@@ -183,6 +199,54 @@ class CompanyRepository:
             raise HTTPException(status_code=404, detail="No members found")
         return company_members
         
+
+    async def send_join_request(self, company_id: UUID, user_id: UUID) -> None:
+        await self.get_company_by_id(company_id)
+        request_creation = Requests(company_id=company_id, user_id=user_id, status=RequestsStatus.PENDING)
+        self.db.add(request_creation)
+        await self.db.commit()
+        await self.db.refresh(request_creation)
+        logging.info(f"Join request sent to company with id {company_id}")
+        return None
+    
+    async def cancel_join_request(self, company_id: UUID, user_id: UUID) -> None:
+        request = await self.db.execute(select(Requests).where(Requests.company_id == company_id).where(Requests.user_id == user_id))
+        request = request.scalars().first()
+        if not request:
+            raise HTTPException(status_code=404, detail="Request not found")
+        await self.db.delete(request)
+        await self.db.commit()
+        logging.info("Join request cancelled")
+        return None
+    
+    async def accept_join_request(self, company_id: UUID, user_id: UUID) -> None:
+        request = await self.db.execute(select(Requests).where(Requests.company_id == company_id).where(Requests.user_id == user_id))
+        request = request.scalars().first()
+        if not request:
+            raise HTTPException(status_code=404, detail="Request not found")
+        if request.status == RequestsStatus.PENDING:
+            request.status = RequestsStatus.ACCEPTED
+            company_member_adding = Company_Members(company_id=company_id, user_id=user_id)
+            self.db.add(company_member_adding)
+            await self.db.commit()
+            await self.db.refresh(company_member_adding)
+            logging.info("Join request accepted")
+            return None
+        else:
+            raise HTTPException(status_code=404, detail="Request already accepted")
+        
+
+    async def reject_join_request(self, company_id: UUID, user_id: UUID) -> None:
+        request = await self.db.execute(select(Requests).where(Requests.company_id == company_id).where(Requests.user_id == user_id))
+        request = request.scalars().first()
+        if not request:
+            raise HTTPException(status_code=404, detail="Request not found")
+        if request.status == RequestsStatus.PENDING:
+            request.status = RequestsStatus.REJECTED
+            await self.db.commit()
+            logging.info("Join request rejected")
+            return None
+    
 
     
 

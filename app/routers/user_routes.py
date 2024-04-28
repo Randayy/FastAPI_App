@@ -71,3 +71,9 @@ async def get_my_invitations(db: AsyncSession = Depends(get_session), current_us
     service = UserService(db)
     invitations = await service.get_my_invitations(current_user)
     return invitations
+
+@user_router.post("/my_requests")
+async def get_my_requests(db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
+    service = UserService(db)
+    requests = await service.get_my_requests(current_user)
+    return requests
