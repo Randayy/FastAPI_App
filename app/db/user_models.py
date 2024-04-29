@@ -18,8 +18,8 @@ class User(BaseTable):
     email = Column(String(100), unique=True, nullable=False)
     first_name = Column(String(30), nullable=True)
     last_name = Column(String(30), nullable=True)
-    companies = relationship('Company', back_populates='owner')
-    invitations = relationship('Invitations', back_populates='user')
+    companies = relationship('Company', back_populates='owner', cascade='delete')
+    invitations = relationship('Invitations', back_populates='user', cascade='delete')
 
 
 class Company(BaseTable):
@@ -30,8 +30,8 @@ class Company(BaseTable):
     owner_id = Column(UUID(as_uuid=True), ForeignKey(
         'users.id'), default=uuid.uuid4, nullable=False)
     owner = relationship('User', back_populates='companies')
-    members = relationship('Company_Members', back_populates='company')
-    invitations = relationship('Invitations', back_populates='company')
+    members = relationship('Company_Members', back_populates='company', cascade='delete')
+    invitations = relationship('Invitations', back_populates='company', cascade='delete')
     visible = Column(Boolean, default=True, nullable=False)
 
 
@@ -42,7 +42,7 @@ class CompanyMember(BaseTable):
         'company.id'), nullable=False)
     user_id = Column(UUID(as_uuid=True), ForeignKey(
         'users.id'), nullable=False)
-    company = relationship('Company', back_populates='members')
+    company = relationship('Company', back_populates='members', cascade='delete')
 
 
 class ActionStatus(Enum):
@@ -60,6 +60,6 @@ class Action(BaseTable):
         'company.id'), nullable=False)
     user_id = Column(UUID(as_uuid=True), ForeignKey(
         'users.id'), nullable=False)
-    user = relationship('User', back_populates='invitations')
-    company = relationship('Company', back_populates='invitations')
+    user = relationship('User', back_populates='invitations', cascade='delete')
+    company = relationship('Company', back_populates='invitations', cascade='delete')
 
