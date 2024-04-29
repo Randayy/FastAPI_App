@@ -30,7 +30,7 @@ class Company(BaseTable):
     owner_id = Column(UUID(as_uuid=True), ForeignKey(
         'users.id'), default=uuid.uuid4, nullable=False)
     owner = relationship('User', back_populates='companies')
-    members = relationship('Company_Members', back_populates='company', cascade='delete')
+    members = relationship('CompanyMember', back_populates='company', cascade='delete')
     actions = relationship('Action', back_populates='company', cascade='delete')
     visible = Column(Boolean, default=True, nullable=False)
 
