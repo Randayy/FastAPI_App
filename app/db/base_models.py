@@ -10,4 +10,4 @@ Base = declarative_base()
 class BaseTable(Base):
     __abstract__ = True
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,ondelete='CASCADE')
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

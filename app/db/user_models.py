@@ -18,7 +18,10 @@ class User(BaseTable):
     email = Column(String(100), unique=True, nullable=False)
     first_name = Column(String(30), nullable=True)
     last_name = Column(String(30), nullable=True)
-    companies = relationship('Company', back_populates='owner', cascade='delete')
+    companies = relationship(
+        'Company', back_populates='owner', cascade='delete')
+    member = relationship(
+        'CompanyMember', back_populates='user', cascade='delete')
     actions = relationship('Action', back_populates='user', cascade='delete')
 
 
@@ -28,10 +31,10 @@ class Company(BaseTable):
     name = Column(String(100), unique=True, nullable=False)
     description = Column(String(255), nullable=True)
     owner_id = Column(UUID(as_uuid=True), ForeignKey(
-        'users.id'), default=uuid.uuid4, nullable=False)
+        'users.id', ondelete='CASCADE'), default=uuid.uuid4, nullable=False)
     owner = relationship('User', back_populates='companies')
-    members = relationship('CompanyMember', back_populates='company', cascade='delete')
-    actions = relationship('Action', back_populates='company', cascade='delete')
+    actions = relationship(
+        'Action', back_populates='company', cascade='delete')
     visible = Column(Boolean, default=True, nullable=False)
 
 
@@ -39,10 +42,10 @@ class CompanyMember(BaseTable):
     __tablename__ = 'company_members'
 
     company_id = Column(UUID(as_uuid=True), ForeignKey(
-        'company.id'), nullable=False,ondelete='CASCADE')
+        'company.id', ondelete='CASCADE'), nullable=False)
     user_id = Column(UUID(as_uuid=True), ForeignKey(
-        'users.id'), nullable=False,ondelete='CASCADE')
-    company = relationship('Company', back_populates='members', cascade='delete')
+        'users.id', ondelete='CASCADE'), nullable=False)
+    user = relationship('User', back_populates='member', cascade='delete')
 
 
 class ActionStatus(Enum):
@@ -52,14 +55,15 @@ class ActionStatus(Enum):
     REJECTED = 'rejected'
     CANCELLED = 'cancelled'
 
+
 class Action(BaseTable):
     __tablename__ = 'actions'
 
     status = Column(EnumColumn(ActionStatus), nullable=False)
     company_id = Column(UUID(as_uuid=True), ForeignKey(
-        'company.id'), nullable=False,ondelete='CASCADE')
+        'company.id', ondelete='CASCADE'), nullable=False)
     user_id = Column(UUID(as_uuid=True), ForeignKey(
-        'users.id'), nullable=False,ondelete='CASCADE')
+        'users.id', ondelete='CASCADE'), nullable=False)
+    company = relationship(
+        'Company', back_populates='actions', cascade='delete')
     user = relationship('User', back_populates='actions', cascade='delete')
-    company = relationship('Company', back_populates='actions', cascade='delete')
-

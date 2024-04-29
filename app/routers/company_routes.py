@@ -4,7 +4,7 @@ from app.db.connect_postgresql import get_session
 from fastapi import APIRouter, HTTPException, status
 
 from app.db.user_models import User, Company
-from app.schemas.company_schemas import CompanyCreateSchema
+from app.schemas.company_schemas import CompanyCreateSchema, CompanyActionSchema
 from app.services.company_services import CompanyService
 from app.services.user_service import get_current_user_from_token
 from uuid import UUID
@@ -45,46 +45,49 @@ async def update_company(company_id: UUID, company_data: CompanyCreateSchema, db
     return company
 
 
-@company_router.post("/companies/{company_id}/invite{user_id}")
+@company_router.post("/companies/{company_id}/invite{user_id}", response_model=CompanyActionSchema)
 async def invite_user_to_company(company_id: UUID, user_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
     service = CompanyService(db)
     await service.invite_user_to_company(company_id, user_id, current_user)
-    return {"message": "User invited successfully"}
+    return CompanyActionSchema(message="Invitation sent successfully!", company_id=company_id, user_id=user_id)
 
 
-@company_router.post("/companies/{company_id}/accept")
+@company_router.post("/companies/{company_id}/accept", response_model=CompanyActionSchema)
 async def accept_invitation(company_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
     service = CompanyService(db)
+    user_id = current_user.id
     await service.accept_invitation(company_id, current_user)
-    return {"message": "Invitation accepted successfully"}
+    return CompanyActionSchema(message="Invitation accepted successfully!", company_id=company_id, user_id=user_id)
 
 
-@company_router.post("/companies/{company_id}/reject")
+@company_router.post("/companies/{company_id}/reject", response_model=CompanyActionSchema)
 async def reject_invitation(company_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
     service = CompanyService(db)
+    user_id = current_user.id
     await service.reject_invitation(company_id, current_user)
-    return {"message": "Invitation rejected successfully"}
+    return CompanyActionSchema(message="Invitation rejected successfully!", company_id=company_id, user_id=user_id)
 
 
-@company_router.delete("/companies/{company_id}/cancel_invitation/{user_id}")
+@company_router.delete("/companies/{company_id}/cancel_invitation/{user_id}", response_model=CompanyActionSchema)
 async def cancel_invitation(company_id: UUID, user_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
     service = CompanyService(db)
     await service.cancel_invitation(company_id, user_id, current_user)
-    return {"message": "Invitation cancelled successfully"}
+    return CompanyActionSchema(message="Invitation cancelled successfully!", company_id=company_id, user_id=user_id)
 
 
 @company_router.delete("/companies/{company_id}/delete/{user_id}")
 async def delete_user_from_company(company_id, user_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
     service = CompanyService(db)
     await service.delete_user_from_company(company_id, user_id, current_user)
-    return {"message": "User deleted from company successfully"}
+    return CompanyActionSchema(message="User deleted successfully!", company_id=company_id, user_id=user_id)
 
 
-@company_router.post("/companies/{company_id}/exit")
+@company_router.post("/companies/{company_id}/exit", response_model=CompanyActionSchema)
 async def exit_from_company(company_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
     service = CompanyService(db)
+    user_id = current_user.id
     await service.exit_from_company(company_id, current_user)
-    return {"message": "User exited from company successfully"}
+    return CompanyActionSchema(message="Exited from company successfully!", company_id=company_id, user_id=user_id)
 
 
 @company_router.get("/companies/{company_id}/invited-users")
@@ -105,29 +108,31 @@ async def get_company_members(company_id: UUID, db: AsyncSession = Depends(get_s
     return await service.get_company_members(company_id, current_user)
 
 
-@company_router.post("/send-join-request/{company_id}")
+@company_router.post("/send-join-request/{company_id}", response_model=CompanyActionSchema)
 async def send_join_request(company_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
     service = CompanyService(db)
+    user_id = current_user.id
     await service.send_join_request(company_id, current_user)
-    return {"message": "Join request sent successfully"}
+    return CompanyActionSchema(message="Join request sent successfully!", company_id=company_id, user_id=user_id)
 
 
-@company_router.delete("/cancel-join-request/{company_id}")
+@company_router.delete("/cancel-join-request/{company_id}", response_model=CompanyActionSchema)
 async def cancel_join_request(company_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
     service = CompanyService(db)
+    user_id = current_user.id
     await service.cancel_join_request(company_id, current_user)
-    return {"message": "Join request cancelled successfully"}
+    return CompanyActionSchema(message="Join request cancelled successfully!", company_id=company_id, user_id=user_id)
 
 
-@company_router.post("/accept-join-request/{company_id}/{user_id}")
+@company_router.post("/accept-join-request/{company_id}/{user_id}", response_model=CompanyActionSchema)
 async def accept_join_request(company_id: UUID, user_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
     service = CompanyService(db)
     await service.accept_join_request(company_id, user_id, current_user)
-    return {"message": "Join request accepted successfully"}
+    return CompanyActionSchema(message="Join request accepted successfully!", company_id=company_id, user_id=user_id)
 
 
-@company_router.post("/reject-join-request/{company_id}/{user_id}")
+@company_router.post("/reject-join-request/{company_id}/{user_id}", response_model=CompanyActionSchema)
 async def reject_join_request(company_id: UUID, user_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
     service = CompanyService(db)
     await service.reject_join_request(company_id, user_id, current_user)
-    return {"message": "Join request rejected successfully"}
+    return CompanyActionSchema(message="Join request rejected successfully!", company_id=company_id, user_id=user_id)

@@ -46,3 +46,12 @@ class CompanyListSchema(BaseModel):
 class CompanyUpdateSchema(CompanyBaseSchema):
     class Config:
         from_attributes = True
+
+
+class CompanyActionSchema(BaseModel):
+    message: Optional[str] = None
+    user_id: UUID
+    company_id: UUID
+
+    class Config:
+        from_attributes = True
