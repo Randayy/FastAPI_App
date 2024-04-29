@@ -66,14 +66,14 @@ async def read_users_me(db: AsyncSession = Depends(get_session), current_user: U
     return UserDetailSchema(**current_user.__dict__)
 
 
-@user_router.get("/my_invitations", response_model=UserInvitationListSchema)
+@user_router.get("/my-invitations", response_model=UserInvitationListSchema)
 async def get_my_invitations(db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
     service = UserService(db)
     invitations = await service.get_my_invitations(current_user)
     return invitations
 
 
-@user_router.post("/my_requests")
+@user_router.post("/my-requests")
 async def get_my_requests(db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
     service = UserService(db)
     requests = await service.get_my_requests(current_user)

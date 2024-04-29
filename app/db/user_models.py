@@ -39,9 +39,9 @@ class CompanyMember(BaseTable):
     __tablename__ = 'company_members'
 
     company_id = Column(UUID(as_uuid=True), ForeignKey(
-        'company.id'), nullable=False)
+        'company.id'), nullable=False,ondelete='CASCADE')
     user_id = Column(UUID(as_uuid=True), ForeignKey(
-        'users.id'), nullable=False)
+        'users.id'), nullable=False,ondelete='CASCADE')
     company = relationship('Company', back_populates='members', cascade='delete')
 
 
@@ -57,9 +57,9 @@ class Action(BaseTable):
 
     status = Column(EnumColumn(ActionStatus), nullable=False)
     company_id = Column(UUID(as_uuid=True), ForeignKey(
-        'company.id'), nullable=False)
+        'company.id'), nullable=False,ondelete='CASCADE')
     user_id = Column(UUID(as_uuid=True), ForeignKey(
-        'users.id'), nullable=False)
+        'users.id'), nullable=False,ondelete='CASCADE')
     user = relationship('User', back_populates='actions', cascade='delete')
     company = relationship('Company', back_populates='actions', cascade='delete')
 
