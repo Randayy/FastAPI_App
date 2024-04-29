@@ -13,6 +13,9 @@ from typing import Annotated
 from app.db.user_models import User
 from app.auth.jwtauth import oauth2_scheme
 from fastapi.security import HTTPAuthorizationCredentials
+from app.services.user_service import get_current_user_from_token
+
+
 user_router = APIRouter()
 
 

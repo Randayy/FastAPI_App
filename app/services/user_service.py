@@ -43,7 +43,7 @@ async def get_current_user_from_token(token: str = Depends(oauth2_scheme), db: A
             status_code=401, detail="Token has expired")
     old_user = await UserRepository(db).get_user_by_email(email=token_data.email)
     if not old_user:
-        user_creation = await UserService.create_user_from_token(email=token_data.email)
+        user_creation = await UserService(db).create_user_from_token(email=token_data.email)
         return user_creation
     else:
         exp_date = datetime.fromtimestamp(token_data.exp)
@@ -72,9 +72,8 @@ class UserService:
     async def get_user_by_id(self, user_id: UUID, current_user: User) -> UserDetailSchema:
         user = await self.user_repository.get_user_by_id(user_id)
         current_user_id = current_user.id
-        result = await self.check_user_permissions(user_id, current_user_id)
-        if result:
-            return user
+        await self.check_user_permissions(user_id, current_user_id)
+        return user
 
     async def get_users_list(self) -> List[UserDetailSchema]:
         users = await self.user_repository.get_users_list()
@@ -92,7 +91,7 @@ class UserService:
     async def update_user(self, user_id: UUID, user_data: UserUpdateRequestSchema, current_user: User) -> UserDetailSchema:
         await self.check_user_permissions(user_id, current_user.id)
         user = await self.user_repository.get_user_by_id(user_id)
-        
+
         current_password = user.password
         entered_password = user_data['current_password']
 
@@ -151,4 +150,3 @@ class UserService:
         if current_user_id != user_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail="You dont have permission to access this user")
-        
