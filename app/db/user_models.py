@@ -19,7 +19,7 @@ class User(BaseTable):
     first_name = Column(String(30), nullable=True)
     last_name = Column(String(30), nullable=True)
     companies = relationship('Company', back_populates='owner', cascade='delete')
-    invitations = relationship('Invitations', back_populates='user', cascade='delete')
+    actions = relationship('Action', back_populates='user', cascade='delete')
 
 
 class Company(BaseTable):
@@ -31,7 +31,7 @@ class Company(BaseTable):
         'users.id'), default=uuid.uuid4, nullable=False)
     owner = relationship('User', back_populates='companies')
     members = relationship('Company_Members', back_populates='company', cascade='delete')
-    invitations = relationship('Invitations', back_populates='company', cascade='delete')
+    actions = relationship('Action', back_populates='company', cascade='delete')
     visible = Column(Boolean, default=True, nullable=False)
 
 
@@ -60,6 +60,6 @@ class Action(BaseTable):
         'company.id'), nullable=False)
     user_id = Column(UUID(as_uuid=True), ForeignKey(
         'users.id'), nullable=False)
-    user = relationship('User', back_populates='invitations', cascade='delete')
-    company = relationship('Company', back_populates='invitations', cascade='delete')
+    user = relationship('User', back_populates='actions', cascade='delete')
+    company = relationship('Company', back_populates='actions', cascade='delete')
 
