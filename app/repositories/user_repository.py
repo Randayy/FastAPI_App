@@ -1,4 +1,4 @@
-from app.db.user_models import User, Invitations, Requests
+from app.db.user_models import User, Action, ActionStatus
 from app.schemas.user_schemas import SignUpRequestSchema, UserUpdateRequestSchema, UserListSchema, UserDetailSchema, UserInvitationSchema
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
@@ -79,11 +79,11 @@ class UserRepository:
         return user
 
     async def get_my_invitations(self, id: UUID) -> List[UserInvitationSchema]:
-        my_invitations = await self.db.execute(select(Invitations).where(Invitations.user_id == id))
+        my_invitations = await self.db.execute(select(Action).where(Action.user_id == id).where(Action.status == ActionStatus.INVITED))
         my_invitations = my_invitations.scalars().all()
         return my_invitations
 
     async def get_my_requests(self, id: UUID) -> List[UserInvitationSchema]:
-        my_requests = await self.db.execute(select(Requests).where(Requests.user_id == id))
+        my_requests = await self.db.execute(select(Action).where(Action.user_id == id).where(Action.status == ActionStatus.REQUESTED))
         my_requests = my_requests.scalars().all()
         return my_requests

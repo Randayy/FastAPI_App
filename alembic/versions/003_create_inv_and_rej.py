@@ -19,17 +19,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.create_table('invitations',
-    sa.Column('status', sa.Enum('PENDING', 'ACCEPTED', 'REJECTED', 'CANCELLED', name='invitestatus'), nullable=False),
-    sa.Column('company_id', sa.UUID(), nullable=False),
-    sa.Column('user_id', sa.UUID(), nullable=False),
-    sa.Column('id', sa.UUID(), nullable=False),
-    sa.ForeignKeyConstraint(['company_id'], ['company.id'], ),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_table('requests',
-    sa.Column('status', sa.Enum('PENDING', 'ACCEPTED', 'REJECTED', 'CANCELLED', name='requestsstatus'), nullable=False),
+    op.create_table('actions',
+    sa.Column('status', sa.Enum('INVITED','REQUESTED', 'ACCEPTED', 'REJECTED', 'CANCELLED', name='actionstatus'), nullable=False),
     sa.Column('company_id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
     sa.Column('id', sa.UUID(), nullable=False),
@@ -38,7 +29,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('company_members',
-    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('company_id', sa.UUID(as_uuid=True), nullable=False),
     sa.Column('user_id', sa.UUID(as_uuid=True), nullable=False),
     sa.PrimaryKeyConstraint('id')
@@ -48,7 +39,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-
-    op.drop_table('invitations')
+    op.drop_table('actions')
     op.drop_table('company_members')
-    op.drop_table('requests')

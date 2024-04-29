@@ -4,7 +4,7 @@ from pydantic.fields import Field
 from uuid import UUID
 from enum import Enum
 from sqlalchemy import Enum as EnumC
-from app.db.user_models import InviteStatus
+
 
 
 class UserBaseSchema(BaseModel):

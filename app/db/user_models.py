@@ -20,8 +20,6 @@ class User(BaseTable):
     last_name = Column(String(30), nullable=True)
     companies = relationship('Company', back_populates='owner')
     invitations = relationship('Invitations', back_populates='user')
-    requests = relationship('Requests', back_populates='user')
-
 
 
 class Company(BaseTable):
@@ -34,11 +32,10 @@ class Company(BaseTable):
     owner = relationship('User', back_populates='companies')
     members = relationship('Company_Members', back_populates='company')
     invitations = relationship('Invitations', back_populates='company')
-    requests = relationship('Requests', back_populates='company')
     visible = Column(Boolean, default=True, nullable=False)
 
 
-class Company_Members(BaseTable):
+class CompanyMember(BaseTable):
     __tablename__ = 'company_members'
 
     company_id = Column(UUID(as_uuid=True), ForeignKey(
@@ -46,41 +43,23 @@ class Company_Members(BaseTable):
     user_id = Column(UUID(as_uuid=True), ForeignKey(
         'users.id'), nullable=False)
     company = relationship('Company', back_populates='members')
-    
-    
-    
 
 
-class InviteStatus(Enum):
-    PENDING = 'pending'
+class ActionStatus(Enum):
+    INVITED = 'invited'
+    REQUESTED = 'requested'
     ACCEPTED = 'accepted'
     REJECTED = 'rejected'
     CANCELLED = 'cancelled'
 
-class RequestsStatus(Enum):
-    PENDING = 'pending'
-    ACCEPTED = 'accepted'
-    REJECTED = 'rejected'
-    CANCELLED = 'cancelled'
+class Action(BaseTable):
+    __tablename__ = 'actions'
 
-class Invitations(BaseTable):
-    __tablename__ = 'invitations'
-
-    status = Column(EnumColumn(InviteStatus), nullable=False)
-    company_id = Column(UUID(as_uuid=True), ForeignKey('company.id'), nullable=False)
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
+    status = Column(EnumColumn(ActionStatus), nullable=False)
+    company_id = Column(UUID(as_uuid=True), ForeignKey(
+        'company.id'), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey(
+        'users.id'), nullable=False)
     user = relationship('User', back_populates='invitations')
     company = relationship('Company', back_populates='invitations')
-
-
-class Requests(BaseTable):
-    __tablename__ = 'requests'
-
-    status = Column(EnumColumn(RequestsStatus), nullable=False)
-    company_id = Column(UUID(as_uuid=True), ForeignKey('company.id'), nullable=False)
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
-    user = relationship('User', back_populates='requests')
-    company = relationship('Company', back_populates='requests')
-
-
 
