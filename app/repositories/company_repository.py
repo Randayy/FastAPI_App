@@ -12,7 +12,7 @@ from asyncpg.exceptions import UniqueViolationError
 from sqlalchemy.exc import IntegrityError
 from app.db.user_models import Action, ActionStatus, CompanyMember
 from sqlalchemy.sql import text
-from sqlalchemy import delete
+from sqlalchemy import delete, join
 
 
 class CompanyRepository:
@@ -214,50 +214,49 @@ class CompanyRepository:
         logging.info("User exited from company")
 
     async def get_invited_users(self, company_id: UUID):
-        invited_users = await self.db.execute(select(Action.user_id).where(Action.company_id == company_id).where(Action.status == ActionStatus.INVITED))
-        invited_users = invited_users.scalars().all()
-        users = []
+        invited_users_join = (
+            select(User).
+            select_from(join(User, Action, User.id == Action.user_id)).
+            where(Action.company_id == company_id).
+            where(Action.status == ActionStatus.INVITED)
+        )
+        result = await self.db.execute(invited_users_join)
+        users = result.scalars().all()
 
-        if not invited_users:
+        if not users:
             raise HTTPException(
                 status_code=404, detail="No invited users found")
-        for user_id in invited_users:
-            user = await self.db.get(User, user_id)
-            users.append(user)
-            if not user:
-                raise HTTPException(
-                    status_code=404, detail="User not found")
+
         return users
 
     async def get_requested_users(self, company_id: UUID):
-        requested_users = await self.db.execute(select(Action.user_id).where(Action.company_id == company_id).where(Action.status == ActionStatus.REQUESTED))
-        requested_users = requested_users.scalars().all()
-        users = []
+        requested_user_join = (
+            select(User).
+            select_from(join(User, Action, User.id == Action.user_id)).
+            where(Action.company_id == company_id).
+            where(Action.status == ActionStatus.REQUESTED)
+        )
+        result = await self.db.execute(requested_user_join)
+        users = result.scalars().all()
 
-        if not requested_users:
+        if not users:
             raise HTTPException(
                 status_code=404, detail="No requested users found")
-        for user_id in requested_users:
-            user = await self.db.get(User, user_id)
-            users.append(user)
-            if not user:
-                raise HTTPException(
-                    status_code=404, detail="User not found")
+
         return users
 
     async def get_company_members(self, company_id: UUID):
-        company_members = await self.db.execute(select(CompanyMember.user_id).where(CompanyMember.company_id == company_id))
-        company_members = company_members.scalars().all()
-        users = []
+        join_members = (
+            select(User).
+            select_from(join(User, CompanyMember, User.id == CompanyMember.user_id)).
+            where(CompanyMember.company_id == company_id)
+        )
+        result = await self.db.execute(join_members)
+        users = result.scalars().all()
 
-        if not company_members:
+        if not users:
             raise HTTPException(status_code=404, detail="No members found")
-        for user_id in company_members:
-            user = await self.db.get(User, user_id)
-            users.append(user)
-            if not user:
-                raise HTTPException(
-                    status_code=404, detail="User not found")
+
         return users
 
     async def send_join_request(self, company_id: UUID, user_id: UUID) -> None:
