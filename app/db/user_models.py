@@ -4,7 +4,7 @@ from app.db.base_models import Base
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import Column, String, Boolean, ForeignKey
+from sqlalchemy import Column, String, Boolean, ForeignKey, UniqueConstraint
 import uuid
 from enum import Enum
 from sqlalchemy import Enum as EnumColumn
@@ -18,10 +18,8 @@ class User(BaseTable):
     email = Column(String(100), unique=True, nullable=False)
     first_name = Column(String(30), nullable=True)
     last_name = Column(String(30), nullable=True)
-    companies = relationship(
-        'Company', back_populates='owner')
     member = relationship(
-        'CompanyMember', back_populates='user')
+        'CompanyMember', back_populates='user',cascade='delete')
     actions = relationship('Action', back_populates='user')
 
 
@@ -30,9 +28,6 @@ class Company(BaseTable):
 
     name = Column(String(100), unique=True, nullable=False)
     description = Column(String(255), nullable=True)
-    owner_id = Column(UUID(as_uuid=True), ForeignKey(
-        'users.id'), default=uuid.uuid4, nullable=False)
-    owner = relationship('User', back_populates='companies')
     actions = relationship(
         'Action', back_populates='company', cascade='delete')
     members = relationship('CompanyMember', back_populates='company', cascade='delete')
@@ -47,13 +42,14 @@ class CompanyMember(BaseTable):
     __tablename__ = 'company_members'
 
     company_id = Column(UUID(as_uuid=True), ForeignKey(
-        'company.id'), nullable=False)
+        'company.id',ondelete='CASCADE'), nullable=False)
     user_id = Column(UUID(as_uuid=True), ForeignKey(
-        'users.id'), nullable=False)
+        'users.id',ondelete='CASCADE'), nullable=False)
     role = Column(EnumColumn(Role), nullable=False)
     company = relationship('Company', back_populates='members', cascade='delete')
     user = relationship('User', back_populates='member')
 
+    __table_args__ = (UniqueConstraint('company_id', 'user_id', name='_company_user_uc'),)
 
 class ActionStatus(Enum):
     INVITED = 'invited'

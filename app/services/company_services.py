@@ -2,6 +2,7 @@ from typing import List, Optional
 from app.repositories.company_repository import CompanyRepository
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.company_schemas import CompanyCreateSchema, CompanyDetailSchema, CompanyListSchema
+from app.schemas.user_schemas import UserDetailSchema, UserListSchema
 import bcrypt
 import logging
 from fastapi import HTTPException
@@ -21,7 +22,7 @@ class CompanyService:
     async def create_company(self, company_data: CompanyCreateSchema, current_user: User) -> Company:
         current_user_id = current_user.id
         company = await self.company_repository.create_company(company_data.dict(), current_user_id)
-        return company
+        return {"message": "Company created successfully", "company": company}
 
     async def get_company_by_id(self, company_id: UUID) -> CompanyDetailSchema:
         company = await self.company_repository.get_company_by_id(company_id)
@@ -43,7 +44,7 @@ class CompanyService:
 
     async def check_if_owner_of_company(self, company_id: UUID, current_user: User):
         company = await self.company_repository.get_company_without_visability(company_id)
-        if company.owner_id != current_user.id:
+        if not current_user.id:
             raise HTTPException(
                 status_code=401, detail="You are not authorized to update/delete this company")
 
@@ -101,17 +102,17 @@ class CompanyService:
     async def get_invited_users(self, company_id: UUID, current_user: User):
         await self.check_if_owner_of_company(company_id, current_user)
         users = await self.company_repository.get_invited_users(company_id)
-        return users
+        return UserListSchema(users=[UserDetailSchema.from_orm(user) for user in users])
 
     async def get_requested_users(self, company_id: UUID, current_user: User):
         await self.check_if_owner_of_company(company_id, current_user)
         users = await self.company_repository.get_requested_users(company_id)
-        return users
+        return UserListSchema(users=[UserDetailSchema.from_orm(user) for user in users])
 
     async def get_company_members(self, company_id: UUID, current_user: User):
         await self.check_if_owner_of_company(company_id, current_user)
         users = await self.company_repository.get_company_members(company_id)
-        return users
+        return UserListSchema(users=[UserDetailSchema.from_orm(user) for user in users])
 
     async def send_join_request(self, company_id: UUID, current_user: User) -> None:
         await self.check_if_owner_not_request(company_id, current_user.id)
@@ -135,7 +136,7 @@ class CompanyService:
     async def promote_user_to_admin(self, company_id: UUID, user_id: UUID, current_user: User) -> None:
         await self.check_if_owner_of_company(company_id, current_user)
         role = await self.get_user_role_in_company(company_id, user_id)
-        if role != Role.MEMBER:
+        if role == Role.ADMIN or role == Role.OWNER:
             raise HTTPException(
                 status_code=400, detail="User is already an admin or owner")
         await self.company_repository.promote_user_to_admin(company_id, user_id)
@@ -147,7 +148,7 @@ class CompanyService:
     async def demote_admin_to_member(self, company_id: UUID, user_id: UUID, current_user: User) -> None:
         await self.check_if_owner_of_company(company_id, current_user)
         role = await self.get_user_role_in_company(company_id, user_id)
-        if role != Role.ADMIN:
+        if role == Role.MEMBER or role == Role.OWNER:
             raise HTTPException(
                 status_code=400, detail="User is already a member or owner")
         await self.company_repository.demote_admin_to_member(company_id, user_id)

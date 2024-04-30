@@ -24,11 +24,9 @@ def upgrade() -> None:
         sa.Column('id', sa.UUID(), nullable=False),
         sa.Column('name', sa.String(100), nullable=False),
         sa.Column('description', sa.String(255), nullable=True),
-        sa.Column('owner_id', sa.UUID(), nullable=False),
         sa.Column('visible', sa.Boolean(), nullable=False),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('name'),
-        sa.ForeignKeyConstraint(['owner_id'], ['users.id']),
     )
 
 
