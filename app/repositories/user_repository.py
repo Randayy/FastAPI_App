@@ -1,5 +1,5 @@
-from app.db.user_models import User
-from app.schemas.user_schemas import SignUpRequestSchema, UserUpdateRequestSchema, UserListSchema, UserDetailSchema
+from app.db.user_models import User, Action, ActionStatus
+from app.schemas.user_schemas import SignUpRequestSchema, UserUpdateRequestSchema, UserListSchema, UserDetailSchema, UserInvitationSchema
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from fastapi import HTTPException
@@ -53,7 +53,6 @@ class UserRepository:
         await self.db.delete(user)
         await self.db.commit()
         logging.info(f"User with id {user_id} deleted")
-        return None
 
     async def update_user(self, user: UserUpdateRequestSchema, user_data: dict) -> User:
         for key, value in user_data.items():
@@ -77,3 +76,13 @@ class UserRepository:
         user = await self.db.execute(select(User).where(User.email == email))
         user = user.scalars().first()
         return user
+
+    async def get_my_invitations(self, id: UUID) -> List[UserInvitationSchema]:
+        my_invitations = await self.db.execute(select(Action).where(Action.user_id == id).where(Action.status == ActionStatus.INVITED))
+        my_invitations = my_invitations.scalars().all()
+        return my_invitations
+
+    async def get_my_requests(self, id: UUID) -> List[UserInvitationSchema]:
+        my_requests = await self.db.execute(select(Action).where(Action.user_id == id).where(Action.status == ActionStatus.REQUESTED))
+        my_requests = my_requests.scalars().all()
+        return my_requests

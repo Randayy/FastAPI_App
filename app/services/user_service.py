@@ -1,7 +1,7 @@
 from typing import List, Optional
 from app.repositories.user_repository import UserRepository
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.schemas.user_schemas import SignUpRequestSchema, UserDetailSchema, UserUpdateRequestSchema, UserListSchema
+from app.schemas.user_schemas import SignUpRequestSchema, UserDetailSchema, UserUpdateRequestSchema, UserListSchema, UserInvitationSchema, UserInvitationListSchema, UserRequestSchema, UserInvitationListSchema
 import bcrypt
 import logging
 from fastapi import HTTPException
@@ -86,7 +86,6 @@ class UserService:
     async def delete_user(self, user_id: UUID, current_user: User) -> None:
         await self.check_user_permissions(user_id, current_user.id)
         await self.user_repository.delete_user(user_id)
-        return None
 
     async def update_user(self, user_id: UUID, user_data: UserUpdateRequestSchema, current_user: User) -> UserDetailSchema:
         await self.check_user_permissions(user_id, current_user.id)
@@ -150,3 +149,11 @@ class UserService:
         if current_user_id != user_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail="You dont have permission to access this user")
+
+    async def get_my_invitations(self, current_user: User) -> List[UserInvitationSchema]:
+        user_invitations = await self.user_repository.get_my_invitations(current_user.id)
+        return UserInvitationListSchema(invitations=[UserInvitationSchema.from_orm(invitation) for invitation in user_invitations])
+
+    async def get_my_requests(self, current_user: User) -> List[UserRequestSchema]:
+        user_requests = await self.user_repository.get_my_requests(current_user.id)
+        return UserInvitationListSchema(invitations=[UserInvitationSchema.from_orm(request) for request in user_requests])
