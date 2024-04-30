@@ -19,10 +19,10 @@ class User(BaseTable):
     first_name = Column(String(30), nullable=True)
     last_name = Column(String(30), nullable=True)
     companies = relationship(
-        'Company', back_populates='owner', cascade='delete')
+        'Company', back_populates='owner')
     member = relationship(
-        'CompanyMember', back_populates='user', cascade='delete')
-    actions = relationship('Action', back_populates='user', cascade='delete')
+        'CompanyMember', back_populates='user')
+    actions = relationship('Action', back_populates='user')
 
 
 class Company(BaseTable):
@@ -31,10 +31,11 @@ class Company(BaseTable):
     name = Column(String(100), unique=True, nullable=False)
     description = Column(String(255), nullable=True)
     owner_id = Column(UUID(as_uuid=True), ForeignKey(
-        'users.id', ondelete='CASCADE'), default=uuid.uuid4, nullable=False)
+        'users.id'), default=uuid.uuid4, nullable=False)
     owner = relationship('User', back_populates='companies')
     actions = relationship(
         'Action', back_populates='company', cascade='delete')
+    members = relationship('CompanyMember', back_populates='company', cascade='delete')
     visible = Column(Boolean, default=True, nullable=False)
 
 
@@ -42,10 +43,11 @@ class CompanyMember(BaseTable):
     __tablename__ = 'company_members'
 
     company_id = Column(UUID(as_uuid=True), ForeignKey(
-        'company.id', ondelete='CASCADE'), nullable=False)
+        'company.id'), nullable=False)
     user_id = Column(UUID(as_uuid=True), ForeignKey(
-        'users.id', ondelete='CASCADE'), nullable=False)
-    user = relationship('User', back_populates='member', cascade='delete')
+        'users.id'), nullable=False)
+    company = relationship('Company', back_populates='members', cascade='delete')
+    user = relationship('User', back_populates='member')
 
 
 class ActionStatus(Enum):
@@ -66,4 +68,4 @@ class Action(BaseTable):
         'users.id', ondelete='CASCADE'), nullable=False)
     company = relationship(
         'Company', back_populates='actions', cascade='delete')
-    user = relationship('User', back_populates='actions', cascade='delete')
+    user = relationship('User', back_populates='actions')
