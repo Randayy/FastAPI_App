@@ -32,6 +32,7 @@ def upgrade() -> None:
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('company_id', sa.UUID(as_uuid=True), nullable=False),
     sa.Column('user_id', sa.UUID(as_uuid=True), nullable=False),
+    sa.Column('role', sa.Enum('OWNER', 'ADMIN', 'MEMBER', name='role'), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
 

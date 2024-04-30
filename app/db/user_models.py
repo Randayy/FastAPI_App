@@ -38,6 +38,10 @@ class Company(BaseTable):
     members = relationship('CompanyMember', back_populates='company', cascade='delete')
     visible = Column(Boolean, default=True, nullable=False)
 
+class Role(Enum):
+    OWNER = 'owner'
+    ADMIN = 'admin'
+    MEMBER = 'member'
 
 class CompanyMember(BaseTable):
     __tablename__ = 'company_members'
@@ -46,6 +50,7 @@ class CompanyMember(BaseTable):
         'company.id'), nullable=False)
     user_id = Column(UUID(as_uuid=True), ForeignKey(
         'users.id'), nullable=False)
+    role = Column(EnumColumn(Role), nullable=False)
     company = relationship('Company', back_populates='members', cascade='delete')
     user = relationship('User', back_populates='member')
 
@@ -56,6 +61,7 @@ class ActionStatus(Enum):
     ACCEPTED = 'accepted'
     REJECTED = 'rejected'
     CANCELLED = 'cancelled'
+
 
 
 class Action(BaseTable):

@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from fastapi import HTTPException
 from sqlalchemy import select
-from app.db.user_models import User
+from app.db.user_models import User, Role
 import logging
 from sqlalchemy.exc import DBAPIError
 from uuid import UUID
@@ -155,7 +155,7 @@ class CompanyRepository:
         if action.status == ActionStatus.REQUESTED:
             action.status = ActionStatus.ACCEPTED
             company_member_adding = CompanyMember(
-                company_id=company_id, user_id=user_id)
+                company_id=company_id, user_id=user_id, role=Role.MEMBER)
             self.db.add(company_member_adding)
             await self.db.commit()
             await self.db.refresh(company_member_adding)
@@ -169,7 +169,7 @@ class CompanyRepository:
         if action.status == ActionStatus.INVITED:
             action.status = ActionStatus.ACCEPTED
             company_member_adding = CompanyMember(
-                company_id=company_id, user_id=user_id)
+                company_id=company_id, user_id=user_id, role=Role.MEMBER)
             self.db.add(action)
             self.db.add(company_member_adding)
             await self.db.commit()
@@ -255,3 +255,42 @@ class CompanyRepository:
             request.status = ActionStatus.REJECTED
             await self.db.commit()
             logging.info("Join request rejected")
+
+    # be-1
+    async def get_user_role_in_company(self, company_id: UUID, user_id: UUID) -> str:
+        company_member = await self.db.execute(select(CompanyMember).where(CompanyMember.company_id == company_id).where(CompanyMember.user_id == user_id))
+        company_member = company_member.scalars().first()
+        if not company_member:
+            raise HTTPException(
+                status_code=404, detail="User not member of company")
+        return company_member.role
+    
+    async def promote_user_to_admin(self, company_id: UUID, user_id: UUID) -> None:
+        company_member = await self.get_member(company_id, user_id)
+        if company_member.role == Role.MEMBER:
+            company_member.role = Role.ADMIN
+            await self.db.commit()
+            logging.info("User promoted to admin")
+        else:
+            raise HTTPException(
+                status_code=400, detail="User is already an admin or owner")
+        
+    async def demote_admin_to_member(self, company_id: UUID, user_id: UUID) -> None:
+        company_member = await self.get_member(company_id, user_id)
+        if company_member.role == Role.ADMIN:
+            company_member.role = Role.MEMBER
+            await self.db.commit()
+            logging.info("Admin demoted to user")
+        else:
+            raise HTTPException(
+                status_code=400, detail="User is already a member or owner")
+        
+    async def get_company_admins(self, company_id: UUID):
+        company_admins = await self.db.execute(select(CompanyMember.user_id).where(CompanyMember.company_id == company_id).where(CompanyMember.role == Role.ADMIN))
+        company_admins = company_admins.scalars().all()
+        if not company_admins:
+            raise HTTPException(
+                status_code=404, detail="No admins found")
+        return company_admins
+
+        

@@ -5,7 +5,7 @@ from app.schemas.company_schemas import CompanyCreateSchema, CompanyDetailSchema
 import bcrypt
 import logging
 from fastapi import HTTPException
-from app.db.user_models import Company
+from app.db.user_models import Company, Role
 from uuid import UUID
 from app.auth.jwtauth import oauth2_scheme
 from jose import jwt
@@ -130,3 +130,29 @@ class CompanyService:
     async def reject_join_request(self, company_id: UUID, user_id: UUID, current_user: User) -> None:
         await self.check_if_owner_of_company(company_id, current_user)
         await self.company_repository.reject_join_request(company_id, user_id)
+
+    # be-10
+    async def promote_user_to_admin(self, company_id: UUID, user_id: UUID, current_user: User) -> None:
+        await self.check_if_owner_of_company(company_id, current_user)
+        role = await self.get_user_role_in_company(company_id, user_id)
+        if role != Role.MEMBER:
+            raise HTTPException(
+                status_code=400, detail="User is already an admin or owner")
+        await self.company_repository.promote_user_to_admin(company_id, user_id)
+
+    async def get_user_role_in_company(self, company_id: UUID, user_id: UUID):
+        role = await self.company_repository.get_user_role_in_company(company_id, user_id)
+        return role
+    
+    async def demote_admin_to_member(self, company_id: UUID, user_id: UUID, current_user: User) -> None:
+        await self.check_if_owner_of_company(company_id, current_user)
+        role = await self.get_user_role_in_company(company_id, user_id)
+        if role != Role.ADMIN:
+            raise HTTPException(
+                status_code=400, detail="User is already a member or owner")
+        await self.company_repository.demote_admin_to_member(company_id, user_id)
+
+    async def get_company_admins(self, company_id: UUID, current_user: User):
+        await self.check_if_owner_of_company(company_id, current_user)
+        users = await self.company_repository.get_company_admins(company_id)
+        return users
