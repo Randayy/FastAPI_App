@@ -53,7 +53,6 @@ class UserRepository:
         await self.db.delete(user)
         await self.db.commit()
         logging.info(f"User with id {user_id} deleted")
-        return None
 
     async def update_user(self, user: UserUpdateRequestSchema, user_data: dict) -> User:
         for key, value in user_data.items():

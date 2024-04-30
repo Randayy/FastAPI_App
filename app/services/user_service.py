@@ -86,7 +86,6 @@ class UserService:
     async def delete_user(self, user_id: UUID, current_user: User) -> None:
         await self.check_user_permissions(user_id, current_user.id)
         await self.user_repository.delete_user(user_id)
-        return None
 
     async def update_user(self, user_id: UUID, user_data: UserUpdateRequestSchema, current_user: User) -> UserDetailSchema:
         await self.check_user_permissions(user_id, current_user.id)

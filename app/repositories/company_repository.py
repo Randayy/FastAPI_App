@@ -63,7 +63,7 @@ class CompanyRepository:
         await self.db.delete(company)
         await self.db.commit()
         logging.info(f"Company with id {company_id} deleted")
-        return None
+        
 
     async def update_company(self, company_id: UUID, company_data: dict) -> Company:
         company = await self.get_company_without_visability(company_id)
@@ -86,7 +86,7 @@ class CompanyRepository:
         await self.db.commit()
         await self.db.refresh(invitation_creation)
         logging.info("User invited to company")
-        return None
+
 
     async def get_request(self, company_id: UUID, user_id: UUID):
         request = await self.db.execute(select(Action).where(Action.company_id == company_id).where(Action.user_id == user_id).where(Action.status == ActionStatus.REQUESTED))
@@ -117,7 +117,6 @@ class CompanyRepository:
             await self.db.commit()
             await self.db.refresh(action)
             logging.info("Invitation cancelled")
-            return None
 
     async def cancel_invitation_delete(self, company_id: UUID, user_id: UUID) -> None:
         action = await self.get_invitation_for_deleting(company_id, user_id)
@@ -125,7 +124,6 @@ class CompanyRepository:
             action.status = ActionStatus.CANCELLED
             await self.db.commit()
             logging.info("Invitation cancelled")
-            return None
 
     async def check_if_user_is_member_of_company_for_deleting(self, company_id: UUID, user_id: UUID) -> None:
         company_member = await self.db.execute(select(CompanyMember).where(CompanyMember.company_id == company_id).where(CompanyMember.user_id == user_id))
@@ -137,14 +135,12 @@ class CompanyRepository:
         if company_member:
             raise HTTPException(
                 status_code=409, detail="User already member of company")
-        return None
 
     async def check_if_user_invited_already(self, company_id: UUID, user_id: UUID) -> None:
         invitation = await self.db.execute(select(Action).where(Action.company_id == company_id).where(Action.user_id == user_id).where(Action.status == ActionStatus.INVITED))
         invitation = invitation.scalars().first()
         if invitation:
             raise HTTPException(status_code=409, detail="User already invited")
-        return None
 
     async def check_if_user_requested_already(self, company_id: UUID, user_id: UUID) -> None:
         action = await self.db.execute(select(Action).where(Action.company_id == company_id).where(Action.user_id == user_id).where(Action.status == ActionStatus.REQUESTED))
@@ -153,7 +149,6 @@ class CompanyRepository:
             if action.status == ActionStatus.REQUESTED:
                 raise HTTPException(
                     status_code=409, detail="User already requested")
-        return None
 
     async def accept_join_request(self, company_id: UUID, user_id: UUID) -> None:
         action = await self.get_request(company_id, user_id)
@@ -165,7 +160,6 @@ class CompanyRepository:
             await self.db.commit()
             await self.db.refresh(company_member_adding)
             logging.info("Join request accepted")
-            return None
         else:
             raise HTTPException(
                 status_code=409, detail="Request already accepted")
@@ -182,7 +176,6 @@ class CompanyRepository:
             await self.db.refresh(company_member_adding)
             await self.db.refresh(action)
             logging.info("Invitation accepted")
-            return None
         else:
             raise HTTPException(
                 status_code=409, detail="Invite already accepted")
@@ -193,7 +186,6 @@ class CompanyRepository:
         await self.db.commit()
         await self.cancel_invitation_delete(company_id, user_id)
         logging.info("User deleted from company")
-        return None
 
     async def reject_invitation(self, company_id: UUID, current_user: User) -> None:
         action = await self.get_invitation(company_id, current_user.id)
@@ -201,7 +193,6 @@ class CompanyRepository:
             action.status = ActionStatus.REJECTED
             await self.db.commit()
             logging.info("Invitation rejected")
-            return None
         else:
             raise HTTPException(
                 status_code=409, detail="Invitation already accepted")
@@ -219,7 +210,6 @@ class CompanyRepository:
         await self.db.delete(company_member)
         await self.db.commit()
         logging.info("User exited from company")
-        return None
 
     async def get_invited_users(self, company_id: UUID):
         invited_users = await self.db.execute(select(Action.user_id).where(Action.company_id == company_id).where(Action.status == ActionStatus.INVITED))
@@ -252,14 +242,12 @@ class CompanyRepository:
         await self.db.commit()
         await self.db.refresh(request_creation)
         logging.info(f"Join request sent to company with id {company_id}")
-        return None
 
     async def cancel_join_request(self, company_id: UUID, user_id: UUID) -> None:
         request = await self.get_request(company_id, user_id)
         await self.db.delete(request)
         await self.db.commit()
         logging.info("Join request cancelled")
-        return None
 
     async def reject_join_request(self, company_id: UUID, user_id: UUID) -> None:
         request = await self.get_request(company_id, user_id)
@@ -267,4 +255,3 @@ class CompanyRepository:
             request.status = ActionStatus.REJECTED
             await self.db.commit()
             logging.info("Join request rejected")
-            return None
