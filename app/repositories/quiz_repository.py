@@ -203,8 +203,8 @@ class QuizRepository:
         quiz_dict = quiz.__dict__
         return quiz_dict
 
-    async def list_quizzes(self, company_id: UUID):
-        quizzes = await self.db.execute(select(Quiz).where(Quiz.company_id == company_id))
+    async def list_quizzes(self, company_id: UUID, page: int, limit: int):
+        quizzes = await self.db.execute(select(Quiz).where(Quiz.company_id == company_id).offset((page - 1) * limit).limit(limit))
         quizzes = quizzes.scalars().all()
         quizzes_dict = [quiz.__dict__ for quiz in quizzes]
         return quizzes_dict

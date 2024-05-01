@@ -111,10 +111,10 @@ class QuizService:
             quiz_info=quiz_dict, questions=questions)
         return quiz_response
 
-    async def list_quizzes(self, company_id: UUID, current_user: User) -> QuizListSchema:
+    async def list_quizzes(self, company_id: UUID, current_user: User, page: int, limit: int) -> QuizListSchema:
         current_user_id = current_user.id
         await self.check_if_user_is_admin_or_owner_in_company(current_user_id, company_id)
         current_user_id = current_user.id
         await self.check_if_user_is_admin_or_owner_in_company(current_user_id, company_id)
-        quizzes = await self.quiz_repository.list_quizzes(company_id)
+        quizzes = await self.quiz_repository.list_quizzes(company_id, page, limit)
         return [QuizSchema(**quiz) for quiz in quizzes]

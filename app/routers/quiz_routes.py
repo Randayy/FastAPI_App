@@ -62,7 +62,7 @@ async def update_quiz(quiz_data: QuizUpdateSchema, company_id: UUID, quiz_id: UU
 
 
 @quiz_router.get("/quizzes/{company_id}/list-quizzes")
-async def list_quizzes(company_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
+async def list_quizzes(company_id: UUID,page:int = 1,limit:int = 5, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
     service = QuizService(db)
-    result = await service.list_quizzes(company_id, current_user)
+    result = await service.list_quizzes(company_id, current_user,page,limit)
     return result
