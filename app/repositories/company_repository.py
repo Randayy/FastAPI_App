@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from fastapi import HTTPException
 from sqlalchemy import select
-from app.db.user_models import User
+from app.db.user_models import User, Role
 import logging
 from sqlalchemy.exc import DBAPIError
 from uuid import UUID
@@ -12,7 +12,7 @@ from asyncpg.exceptions import UniqueViolationError
 from sqlalchemy.exc import IntegrityError
 from app.db.user_models import Action, ActionStatus, CompanyMember
 from sqlalchemy.sql import text
-from sqlalchemy import delete
+from sqlalchemy import delete, join
 
 
 class CompanyRepository:
@@ -28,13 +28,17 @@ class CompanyRepository:
 
     async def create_company(self, company_data: dict, current_user_id: UUID) -> Company:
         await self.check_company(company_data["name"])
-        company_data["owner_id"] = current_user_id
         company = Company(**company_data)
         self.db.add(company)
         await self.db.commit()
         await self.db.refresh(company)
+        company_owner_adding = CompanyMember(
+            company_id=company.id, user_id=current_user_id, role=Role.OWNER)
+        self.db.add(company_owner_adding)
+        await self.db.commit()
+        await self.db.refresh(company_owner_adding)
         logging.info("Company created")
-        return company
+        return Company(**company_data)
 
     async def get_company_by_id(self, company_id: UUID) -> Company:
         company = await self.get_company_without_visability(company_id)
@@ -63,7 +67,6 @@ class CompanyRepository:
         await self.db.delete(company)
         await self.db.commit()
         logging.info(f"Company with id {company_id} deleted")
-        
 
     async def update_company(self, company_id: UUID, company_data: dict) -> Company:
         company = await self.get_company_without_visability(company_id)
@@ -86,7 +89,6 @@ class CompanyRepository:
         await self.db.commit()
         await self.db.refresh(invitation_creation)
         logging.info("User invited to company")
-
 
     async def get_request(self, company_id: UUID, user_id: UUID):
         request = await self.db.execute(select(Action).where(Action.company_id == company_id).where(Action.user_id == user_id).where(Action.status == ActionStatus.REQUESTED))
@@ -155,7 +157,7 @@ class CompanyRepository:
         if action.status == ActionStatus.REQUESTED:
             action.status = ActionStatus.ACCEPTED
             company_member_adding = CompanyMember(
-                company_id=company_id, user_id=user_id)
+                company_id=company_id, user_id=user_id, role=Role.MEMBER)
             self.db.add(company_member_adding)
             await self.db.commit()
             await self.db.refresh(company_member_adding)
@@ -169,7 +171,7 @@ class CompanyRepository:
         if action.status == ActionStatus.INVITED:
             action.status = ActionStatus.ACCEPTED
             company_member_adding = CompanyMember(
-                company_id=company_id, user_id=user_id)
+                company_id=company_id, user_id=user_id, role=Role.MEMBER)
             self.db.add(action)
             self.db.add(company_member_adding)
             await self.db.commit()
@@ -212,27 +214,50 @@ class CompanyRepository:
         logging.info("User exited from company")
 
     async def get_invited_users(self, company_id: UUID):
-        invited_users = await self.db.execute(select(Action.user_id).where(Action.company_id == company_id).where(Action.status == ActionStatus.INVITED))
-        invited_users = invited_users.scalars().all()
-        if not invited_users:
+        invited_users_join = (
+            select(User).
+            select_from(join(User, Action, User.id == Action.user_id)).
+            where(Action.company_id == company_id).
+            where(Action.status == ActionStatus.INVITED)
+        )
+        result = await self.db.execute(invited_users_join)
+        users = result.scalars().all()
+
+        if not users:
             raise HTTPException(
                 status_code=404, detail="No invited users found")
-        return invited_users
+
+        return users
 
     async def get_requested_users(self, company_id: UUID):
-        requested_users = await self.db.execute(select(Action.user_id).where(Action.company_id == company_id).where(Action.status == ActionStatus.REQUESTED))
-        requested_users = requested_users.scalars().all()
-        if not requested_users:
+        requested_user_join = (
+            select(User).
+            select_from(join(User, Action, User.id == Action.user_id)).
+            where(Action.company_id == company_id).
+            where(Action.status == ActionStatus.REQUESTED)
+        )
+        result = await self.db.execute(requested_user_join)
+        users = result.scalars().all()
+
+        if not users:
             raise HTTPException(
                 status_code=404, detail="No requested users found")
-        return requested_users
+
+        return users
 
     async def get_company_members(self, company_id: UUID):
-        company_members = await self.db.execute(select(CompanyMember.user_id).where(CompanyMember.company_id == company_id))
-        company_members = company_members.scalars().all()
-        if not company_members:
+        join_members = (
+            select(User).
+            select_from(join(User, CompanyMember, User.id == CompanyMember.user_id)).
+            where(CompanyMember.company_id == company_id)
+        )
+        result = await self.db.execute(join_members)
+        users = result.scalars().all()
+
+        if not users:
             raise HTTPException(status_code=404, detail="No members found")
-        return company_members
+
+        return users
 
     async def send_join_request(self, company_id: UUID, user_id: UUID) -> None:
         await self.get_company_by_id(company_id)
@@ -255,3 +280,40 @@ class CompanyRepository:
             request.status = ActionStatus.REJECTED
             await self.db.commit()
             logging.info("Join request rejected")
+
+    # be-1
+    async def get_user_role_in_company(self, company_id: UUID, user_id: UUID) -> str:
+        company_member = await self.db.execute(select(CompanyMember).where(CompanyMember.company_id == company_id).where(CompanyMember.user_id == user_id))
+        company_member = company_member.scalars().first()
+        if not company_member:
+            raise HTTPException(
+                status_code=404, detail="User not member of company")
+        return company_member.role
+
+    async def promote_user_to_admin(self, company_id: UUID, user_id: UUID) -> None:
+        company_member = await self.get_member(company_id, user_id)
+        if company_member.role == Role.MEMBER:
+            company_member.role = Role.ADMIN
+            await self.db.commit()
+            logging.info("User promoted to admin")
+        else:
+            raise HTTPException(
+                status_code=400, detail="User is already an admin or owner")
+
+    async def demote_admin_to_member(self, company_id: UUID, user_id: UUID) -> None:
+        company_member = await self.get_member(company_id, user_id)
+        if company_member.role == Role.ADMIN:
+            company_member.role = Role.MEMBER
+            await self.db.commit()
+            logging.info("Admin demoted to user")
+        else:
+            raise HTTPException(
+                status_code=400, detail="User is already a member or owner")
+
+    async def get_company_admins(self, company_id: UUID):
+        company_admins = await self.db.execute(select(CompanyMember.user_id).where(CompanyMember.company_id == company_id).where(CompanyMember.role == Role.ADMIN))
+        company_admins = company_admins.scalars().all()
+        if not company_admins:
+            raise HTTPException(
+                status_code=404, detail="No admins found")
+        return company_admins

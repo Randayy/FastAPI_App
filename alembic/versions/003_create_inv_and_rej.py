@@ -32,8 +32,10 @@ def upgrade() -> None:
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('company_id', sa.UUID(as_uuid=True), nullable=False),
     sa.Column('user_id', sa.UUID(as_uuid=True), nullable=False),
+    sa.Column('role', sa.Enum('OWNER', 'ADMIN', 'MEMBER', name='role'), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_unique_constraint('_company_user_uc', 'company_members', ['company_id', 'user_id'])
 
 
 
@@ -41,3 +43,4 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_table('actions')
     op.drop_table('company_members')
+    op.drop_constraint('_company_user_uc', 'company_members', type_='unique')

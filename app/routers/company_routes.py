@@ -136,3 +136,21 @@ async def reject_join_request(company_id: UUID, user_id: UUID, db: AsyncSession 
     service = CompanyService(db)
     await service.reject_join_request(company_id, user_id, current_user)
     return CompanyActionSchema(message="Join request rejected successfully!", company_id=company_id, user_id=user_id)
+
+# BE-10
+@company_router.get("/companies/{company_id}/promote-user-to-admin{user_id}")
+async def promote_user_to_admin(company_id: UUID, user_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
+    service = CompanyService(db)
+    await service.promote_user_to_admin(company_id, user_id, current_user)
+    return CompanyActionSchema(message="User promoted to admin successfully!", company_id=company_id, user_id=user_id)
+
+@company_router.get("/companies/{company_id}/demote-admin-to-user{user_id}")
+async def demote_admin_to_user(company_id: UUID, user_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
+    service = CompanyService(db)
+    await service.demote_admin_to_member(company_id, user_id, current_user)
+    return CompanyActionSchema(message="Admin demoted to user successfully!", company_id=company_id, user_id=user_id)
+
+@company_router.get("/companies/{company_id}/admins")
+async def get_company_admins(company_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
+    service = CompanyService(db)
+    return await service.get_company_admins(company_id, current_user)

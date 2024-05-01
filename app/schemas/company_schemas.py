@@ -7,7 +7,6 @@ from uuid import UUID
 class CompanySchema(BaseModel):
     name: str
     description: Optional[str] = None
-    owner_id: UUID
     visible: bool
 
     class Config:
