@@ -82,8 +82,7 @@ class QuizRepository:
                 status_code=403, detail='You are not owner or admin of company with this quiz, you are not permitted to see this)')
 
     async def check_if_user_is_owner_or_admin_in_this_quiz_company(self, current_user_id: UUID, question_id: UUID):
-        question_select = select(Question).options(
-            joinedload(Question.quiz)).where(Question.id == question_id)
+        question_select = select(Question).where(Question.id == question_id)
         result = await self.db.execute(question_select)
         question = result.scalars().first()
         if not question:
@@ -112,13 +111,14 @@ class QuizRepository:
             company_id=company_id
         )
         self.db.add(new_quiz)
-
+        questions = []
+        answers = []
         for question_data in quiz_data['questions']:
             question = Question(
                 question_text=question_data['question_text'],
                 quiz=new_quiz
             )
-            self.db.add(question)
+            questions.append(question)
 
             for answer_data in question_data['answers']:
                 answer = Answer(
@@ -126,8 +126,10 @@ class QuizRepository:
                     is_correct=answer_data['is_correct'],
                     question=question
                 )
-                self.db.add(answer)
+                answers.append(answer)
 
+        self.db.add_all(questions)
+        self.db.add_all(answers)
         await self.db.commit()
         await self.db.refresh(new_quiz)
         quiz_dict = new_quiz.__dict__
@@ -164,9 +166,9 @@ class QuizRepository:
         quiz.title = quiz_data['title']
         quiz.description = quiz_data.get('description')
         quiz.frequency_days = quiz_data['frequency_days']
-
         for question_data in quiz_data['questions']:
             question_id = question_data.get('id')
+
             if question_id:
                 question_select = select(Question).where(
                     Question.id == question_id)
@@ -176,9 +178,11 @@ class QuizRepository:
                     raise HTTPException(
                         status_code=404, detail=f"Question with id {question_id} not found")
                 question.question_text = question_data['question_text']
+                
             else:
                 question = Question(
                     question_text=question_data['question_text'], quiz=quiz)
+                
                 self.db.add(question)
 
             for answer_data in question_data['answers']:

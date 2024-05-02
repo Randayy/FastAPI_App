@@ -78,35 +78,27 @@ class QuizService:
         await self.check_if_user_is_admin_or_owner_in_company(current_user_id, company_id)
         quiz_dict = await self.quiz_repository.create_quiz(quiz_data.dict(), company_id)
         quiz_id = quiz_dict['id']
-        # List[QuestionSchema]
-        questions = await self.get_quiz_questions(quiz_id)
+        questions = await self.get_quiz_questions(quiz_id) # List[QuestionSchema]
         quiz_response = QuizResponseSchema(
             quiz_info=quiz_dict, questions=questions)
         return quiz_response
 
-    async def delete_quiz(self, quiz_id: UUID, current_user: User, company_id: UUID) -> str:
+    async def delete_quiz(self, quiz_id: UUID, current_user: User) -> str:
         current_user_id = current_user.id
         quiz = await self.quiz_repository.get_quiz_by_id(quiz_id)
         quiz_company_id = quiz['company_id']
-        if quiz_company_id != company_id:
-            raise HTTPException(
-                status_code=403, detail="You are not allowed to delete this quiz")
-        await self.check_if_user_is_admin_or_owner_in_company(current_user_id, company_id)
+        await self.check_if_user_is_admin_or_owner_in_company(current_user_id, quiz_company_id)
         await self.quiz_repository.delete_quiz(quiz_id)
-        return "Quiz deleted"
+        return {"message":"Quiz deleted"}
 
-    async def update_quiz(self, quiz_data: QuizUpdateSchema, company_id: UUID, quiz_id: UUID, current_user: User) -> QuizSchema:
+    async def update_quiz(self, quiz_data: QuizUpdateSchema, quiz_id: UUID, current_user: User) -> QuizSchema:
         current_user_id = current_user.id
-        await self.check_if_user_is_admin_or_owner_in_company(current_user_id, company_id)
         quiz = await self.quiz_repository.get_quiz_by_id(quiz_id)
         quiz_company_id = quiz['company_id']
-        if quiz_company_id != company_id:
-            raise HTTPException(
-                status_code=403, detail="It is not your company, you are not owner or admin in this company")
+        await self.check_if_user_is_admin_or_owner_in_company(current_user_id, quiz_company_id)
         quiz_dict = await self.quiz_repository.update_quiz(quiz_id, quiz_data.dict())
         quiz_id = quiz_dict['id']
-        # List[QuestionSchema]
-        questions = await self.get_quiz_questions(quiz_id)
+        questions = await self.get_quiz_questions(quiz_id) # List[QuestionSchema]
         quiz_response = QuizResponseSchema(
             quiz_info=quiz_dict, questions=questions)
         return quiz_response

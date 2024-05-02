@@ -111,3 +111,15 @@ class QuizListSchema(BaseModel):
 
     class Config:
         from_attributes=True
+
+class QuestionListSchema(BaseModel):
+    questions: List[QuestionResponseSchema]
+
+    class Config:
+        from_attributes=True
+    
+class AnswerListSchema(BaseModel):
+    answers: List[AnswerResponseSchema]
+
+    class Config:
+        from_attributes=True
