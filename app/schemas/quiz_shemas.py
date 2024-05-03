@@ -123,3 +123,11 @@ class AnswerListSchema(BaseModel):
 
     class Config:
         from_attributes=True
+
+class ResultSchema(BaseModel):
+    quiz_id: UUID
+    user_id: UUID
+    score: float
+
+    class Config:
+        from_attributes=True

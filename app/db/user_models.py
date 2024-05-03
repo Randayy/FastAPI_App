@@ -4,7 +4,7 @@ from app.db.base_models import Base
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import Column, String, Boolean, ForeignKey, UniqueConstraint, Integer
+from sqlalchemy import Column, String, Boolean, ForeignKey, UniqueConstraint, Integer, Float, DateTime
 import uuid
 from enum import Enum
 from sqlalchemy import Enum as EnumColumn
@@ -111,3 +111,30 @@ class Answer(BaseTable):
     question_id = Column(UUID(as_uuid=True), ForeignKey(
         'questions.id', ondelete='CASCADE'), nullable=False)
     question = relationship('Question', back_populates='answers')
+
+
+class Result(BaseTable):
+    __tablename__ = 'results'
+
+    quiz_id = Column(UUID(as_uuid=True), ForeignKey(
+        'quizzes.id', ondelete='CASCADE'), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey(
+        'users.id', ondelete='CASCADE'), nullable=False)
+    score = Column(Float, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    quiz = relationship('Quiz')
+    user = relationship('User')
+
+
+class UserAnswer(BaseTable):
+    __tablename__ = 'user_answer'
+
+    result_id = Column(UUID(as_uuid=True), ForeignKey(
+        'results.id', ondelete='CASCADE'), nullable=False)
+    question_id = Column(UUID(as_uuid=True), ForeignKey(
+        'questions.id', ondelete='CASCADE'), nullable=False)
+    answer_id = Column(UUID(as_uuid=True), ForeignKey(
+        'answers.id', ondelete='CASCADE'), nullable=False)
+    result = relationship('Result')
+    question = relationship('Question')
+    answer = relationship('Answer')
