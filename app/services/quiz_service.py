@@ -3,16 +3,22 @@ from app.repositories.quiz_repository import QuizRepository
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.quiz_shemas import QuizCreateSchema, QuizSchema, QuestionSchema, AnswerSchema, QuizResponseSchema, QuizUpdateSchema, QuestionResponseSchema, AnswerResponseSchema, QuizListSchema, ResultSchema
 import bcrypt
-from app.schemas.user_answer_schemas import AnswerQuestionListSchema
+from app.schemas.user_answer_schemas import AnswerQuestionListSchema, UserAnswerSchemaRedis
 import logging
 from fastapi import HTTPException
-from app.db.user_models import User, Quiz, Question, Answer, Company, Result
+from app.db.user_models import User, Quiz, Question, Answer, Company, Result, UserAnswer
 from uuid import UUID
 from typing import Annotated
 from app.auth.jwtauth import oauth2_scheme
 from jose import jwt
 from fastapi import Depends
 from app.db.connect_postgresql import get_session
+import aioredis
+import json
+from app.db.connect_redis import RedisClient
+import asyncio
+from app.core.config import Settings
+import aioredis
 
 
 class QuizService:
@@ -124,6 +130,43 @@ class QuizService:
         result = await self.quiz_repository.check_if_user_alredy_submitted_quiz(current_user_id, quiz_id)
         return result
 
+    async def get_user_answers_by_result_id(self, result_id: UUID):
+        user_answers = await self.quiz_repository.get_user_answers_by_result_id(result_id)
+        return user_answers
+    
+    async def get_data_from_redis(self, key: str):
+        redis_client = RedisClient()
+        data = await redis_client.get_data(key)
+        data = json.loads(data)
+        return data
+
+    async def save_user_answers_to_redis(self, result_id: UUID):
+        redis_client = RedisClient()
+
+        user_answer_list = await self.get_user_answers_by_result_id(result_id)
+        for user_answer in user_answer_list:
+            user_answer_id = user_answer.answer_id
+            user_answer_question_id = user_answer.question_id
+            user_answer_result_id = result_id
+            user_answer_user_id = await self.quiz_repository.get_user_id_by_result_id(user_answer_result_id)
+            user_answer_quiz_id = await self.quiz_repository.get_quiz_id_by_result_id(user_answer_result_id)
+            user_answer_company_id = await self.quiz_repository.get_company_id_by_quiz_id(user_answer_quiz_id)
+            is_correct = await self.quiz_repository.check_if_user_answer_is_correct(user_answer_id, user_answer_question_id)
+
+            save_data = {
+                "question_id": str(user_answer_question_id),
+                "answer_id": str(user_answer_id),
+                "user_id": str(user_answer_user_id),
+                "quiz_id": str(user_answer_quiz_id),
+                "company_id": str(user_answer_company_id),
+                "is_correct": is_correct
+            }
+            save_data = json.dumps(save_data)
+
+            key = f"user_answer:{user_answer_user_id}:{user_answer_id}"
+            await redis_client.set_data(key, save_data)
+            logging.info(f"Data saved in Redis: {save_data}")
+
     async def submit_quiz_answers(self, user_answers: AnswerQuestionListSchema, company_id: UUID, quiz_id: UUID, current_user: User):
         current_user_id = current_user.id
         await self.check_if_user_member_of_company(current_user_id, company_id)
@@ -152,6 +195,7 @@ class QuizService:
         result_id = result.id
         result_score = result.score
         await self.quiz_repository.save_user_answers(user_answers, result_id)
+        await self.save_user_answers_to_redis(result_id)
         return {"message": "Quiz submitted successfully", "score": result_score}
 
     async def get_quiz_results(self, company_id: UUID, quiz_id: UUID, current_user: User) -> ResultSchema:

@@ -1,6 +1,7 @@
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.connect_postgresql import get_session
+from app.db.connect_redis import RedisClient
 from fastapi import APIRouter, HTTPException, status
 
 from app.db.user_models import User, Company
@@ -97,4 +98,10 @@ async def get_user_avarage_mark_from_quizzes(user_id: UUID, db: AsyncSession = D
 async def get_user_avarage_mark_from_quizzes_in_company(company_id: UUID, user_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
     service = QuizService(db)
     result = await service.get_user_avarage_mark_from_quizzes_in_company(user_id, company_id, current_user)
+    return result
+
+@quiz_router.get("/get-saved-results-redis/{key}")
+async def get_saved_results_redis(key: str,db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
+    service = QuizService(db)
+    result = await service.get_data_from_redis(key)
     return result
