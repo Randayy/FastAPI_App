@@ -120,7 +120,6 @@ class QuizService:
 
 # be-12
 
-
     async def check_if_user_alredy_submitted_quiz(self, current_user_id: UUID, quiz_id: UUID):
         result = await self.quiz_repository.check_if_user_alredy_submitted_quiz(current_user_id, quiz_id)
         return result
@@ -132,8 +131,28 @@ class QuizService:
         if check:
             raise HTTPException(
                 status_code=400, detail="You already submitted this quiz")
-        result = await self.quiz_repository.submit_quiz_answers(user_answers.dict(), current_user_id, quiz_id)
-        return result
+        await self.quiz_repository.check_if_quiz_exists(quiz_id)
+        question_ids_list = await self.quiz_repository.if_questions_exists_get_questions_ids_list(quiz_id)
+        questions_answers_list_dicts = await self.quiz_repository.get_questions_answers_list_dicts(question_ids_list)
+
+        user_answers_list_dicts = user_answers.dict()
+        user_answers = user_answers_list_dicts['questions_answers']
+        user_answers_list_ids = [ans['answer_id']
+                                 for answer in user_answers for ans in answer['answers']]
+
+        correct_answers = 0
+        questions = 0
+        for question_answers in questions_answers_list_dicts:
+            for question_answer in question_answers:
+                if question_answer['is_correct'] and question_answer['id'] in user_answers_list_ids:
+                    correct_answers += 1
+            questions += 1
+
+        result = await self.quiz_repository.submit_quiz_result(correct_answers, questions, quiz_id, current_user_id)
+        result_id = result.id
+        result_score = result.score
+        await self.quiz_repository.save_user_answers(user_answers, result_id)
+        return {"message": "Quiz submitted successfully", "score": result_score}
 
     async def get_quiz_results(self, company_id: UUID, quiz_id: UUID, current_user: User) -> ResultSchema:
         current_user_id = current_user.id
@@ -153,8 +172,14 @@ class QuizService:
         if current_user_id != user_id:
             raise HTTPException(
                 status_code=401, detail="You are not this user to get this information")
-        result = await self.quiz_repository.get_user_avarage_mark_from_quizzes(user_id)
-        return {"message": f"Avarage mark from quizzes for user with id:{user_id}", "avarage_mark": result}
+        results = await self.quiz_repository.get_user_results_of_quizzes(user_id)
+        sum_of_scores = 0
+        quizzes = 0
+        for result in results:
+            sum_of_scores += result.score
+            quizzes += 1
+        avarage_mark = sum_of_scores/quizzes
+        return {"message": f"Avarage mark from quizzes for user with id:{user_id}", "avarage_mark": avarage_mark}
 
     async def get_user_avarage_mark_from_quizzes_in_company(self, user_id: UUID, company_id: UUID, current_user: User):
         current_user_id = current_user.id
@@ -162,5 +187,11 @@ class QuizService:
         if current_user_id != user_id:
             raise HTTPException(
                 status_code=401, detail="You are not this user to get this information")
-        result = await self.quiz_repository.get_user_avarage_mark_from_quizzes_in_company(company_id, user_id)
-        return {"message": f"Avarage mark from quizzes for user with id:{user_id} in company with id:{company_id}", "avarage_mark": result}
+        results = await self.quiz_repository.get_user_results_of_quizzes_in_company(company_id, user_id)
+        sum_of_scores = 0
+        quizzes = 0
+        for result in results:
+            sum_of_scores += result.score
+            quizzes += 1
+        avarage_mark = sum_of_scores/quizzes
+        return {"message": f"Avarage mark from quizzes for user with id:{user_id} in company with id:{company_id}", "avarage_mark": avarage_mark}

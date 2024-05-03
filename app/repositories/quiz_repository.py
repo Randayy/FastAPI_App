@@ -226,32 +226,43 @@ class QuizRepository:
         result = await self.db.execute(select(Result).where(Result.quiz_id == quiz_id).where(Result.user_id == current_user_id))
         result = result.scalars().first()
         return result
-
-    async def submit_quiz_answers(self, user_answers: dict, current_user_id: UUID, quiz_id: UUID):
+    
+    async def check_if_quiz_exists(self, quiz_id: UUID) -> None:
         result = await self.db.execute(select(Quiz).where(Quiz.id == quiz_id))
         quiz = result.scalars().first()
         if not quiz:
             raise HTTPException(status_code=404, detail="Quiz not found")
+    async def if_questions_exists_get_questions_ids_list(self, quiz_id: UUID) -> List[UUID]:
         questions = await self.db.execute(select(Question).where(Question.quiz_id == quiz_id))
         questions = questions.scalars().all()
         if not questions:
             raise HTTPException(status_code=404, detail="Questions not found")
         question_ids = [question.id for question in questions]
-        questions_answers_dict = []
+        return question_ids
+
+    async def get_questions_answers_list_dicts(self, question_ids:List[UUID]) -> List[dict]:
+        questions_answers_list_dicts = []
         for question_id in question_ids:
             question_answers = await self.get_question_answers(question_id)
-            questions_answers_dict.append(question_answers)
-        user_answers = user_answers['questions_answers']
-        user_answers_list_ids = [ans['answer_id']
-                                 for answer in user_answers for ans in answer['answers']]
-        correct_answers = 0
-        questions = 0
-        for question_answers in questions_answers_dict:
-            for question_answer in question_answers:
-                if question_answer['is_correct'] == True and question_answer['id'] in user_answers_list_ids:
-                    correct_answers += 1
-            questions += 1
+            questions_answers_list_dicts.append(question_answers)
+        return questions_answers_list_dicts
+    
+    async def save_user_answers(self, user_answers: dict, result_id: UUID):
+        for answer in user_answers:
+            question_id = answer['question_id']
+            answers = []
+            for ans in answer['answers']:
+                user_answer = UserAnswer(
+                    result_id=result_id,
+                    question_id=question_id,
+                    answer_id=ans['answer_id']
+                )
+                answers.append(user_answer)
+            self.db.add_all(answers)
 
+        await self.db.commit()
+        
+    async def submit_quiz_result(self, correct_answers: int, questions: int, quiz_id: UUID, current_user_id: UUID):
         score = correct_answers/questions
         quiz_result = Result(
             quiz_id=quiz_id,
@@ -263,22 +274,7 @@ class QuizRepository:
         self.db.add(quiz_result)
         await self.db.commit()
         await self.db.refresh(quiz_result)
-
-        for answer in user_answers:
-            question_id = answer['question_id']
-            answers = []
-            for ans in answer['answers']:
-                user_answer = UserAnswer(
-                    result_id=quiz_result.id,
-                    question_id=question_id,
-                    answer_id=ans['answer_id']
-                )
-                answers.append(user_answer)
-            self.db.add_all(answers)
-
-        await self.db.commit()
-
-        return {"message": "Quiz submitted successfully", "score": score}
+        return quiz_result
 
     async def get_quiz_results_for_user(self, quiz_id: UUID, current_user_id: UUID):
         user_result = await self.db.execute(select(Result).where(Result.quiz_id == quiz_id).where(Result.user_id == current_user_id))
@@ -288,34 +284,19 @@ class QuizRepository:
                 status_code=404, detail="You have not submitted this quiz yet")
         return user_result
 
-    async def get_user_avarage_mark_from_quizzes(self, user_id: UUID) -> float:
+    async def get_user_results_of_quizzes(self, user_id: UUID):
         results = await self.db.execute(select(Result).where(Result.user_id == user_id))
         results = results.scalars().all()
         if not results:
             raise HTTPException(
                 status_code=404, detail="You have not submitted any quiz yet")
-
-        sum_of_scores = 0
-        quizzes = 0
-        for result in results:
-            sum_of_scores += result.score
-            quizzes += 1
-
-        avarage_mark = sum_of_scores/quizzes
-        return avarage_mark
-
-    async def get_user_avarage_mark_from_quizzes_in_company(self, company_id: UUID, user_id: UUID):
+        return results
+    
+    async def get_user_results_of_quizzes_in_company(self, company_id: UUID, user_id: UUID):
         results = await self.db.execute(select(Result).join(Quiz).where(Quiz.company_id == company_id).where(Result.user_id == user_id))
         results = results.scalars().all()
         if not results:
             raise HTTPException(
                 status_code=404, detail="You have not submitted any quiz in this company yet")
 
-        sum_of_scores = 0
-        quizzes = 0
-        for result in results:
-            sum_of_scores += result.score
-            quizzes += 1
-
-        avarage_mark = sum_of_scores/quizzes
-        return avarage_mark
+        return results
