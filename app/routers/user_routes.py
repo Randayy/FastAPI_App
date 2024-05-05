@@ -6,6 +6,7 @@ from app.schemas.auth_schemas import Token
 from app.schemas.user_schemas import SignUpRequestSchema, UserUpdateRequestSchema, UserListSchema, UserDetailSchema, UserInvitationListSchema
 from fastapi import APIRouter, HTTPException, status
 from app.services.user_service import UserService
+from app.services.quiz_service import QuizService
 from app.auth.jwtauth import JWTAuth
 from uuid import UUID
 from fastapi.security import OAuth2PasswordRequestForm
@@ -78,3 +79,21 @@ async def get_my_requests(db: AsyncSession = Depends(get_session), current_user:
     service = UserService(db)
     requests = await service.get_my_requests(current_user)
     return requests
+
+
+# be-14
+@user_router.post("/get-my-quiz-results/{quiz_id}/{redis_id}") # it is number of user_answer in redis (special id if user need to get only answers with this id)
+async def get_my_quiz_results(quiz_id: UUID,redis_id:int, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
+    service = QuizService(db)
+    current_user_id = current_user.id
+    key = f"user_answer:{current_user_id}:{quiz_id}:{redis_id}"
+    results = await service.get_data_from_redis(key)
+    return results
+
+@user_router.post("/get-my-quiz-results/{quiz_id}")
+async def get_my_quiz_results(quiz_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
+    service = QuizService(db)
+    current_user_id = current_user.id
+    results = await service.get_all_user_answer_records(current_user_id, quiz_id)
+    return results
+

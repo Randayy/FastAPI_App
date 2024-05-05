@@ -105,3 +105,21 @@ async def get_saved_results_redis(key: str,db: AsyncSession = Depends(get_sessio
     service = QuizService(db)
     result = await service.get_data_from_redis(key)
     return result
+
+@quiz_router.get("/get-results-of-user-from-redis/{user_id}")
+async def get_results_of_user_from_redis(user_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
+    service = QuizService(db)
+    result = await service.get_results_of_user_from_redis(user_id)
+    return result
+
+@quiz_router.get("/get-results-of-user-in-company/{company_id}/{user_id}")
+async def get_results_of_user_in_company(company_id: UUID, user_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
+    service = QuizService(db)
+    result = await service.get_results_of_user_in_company(user_id, company_id, current_user)
+    return result
+
+@quiz_router.get("/get-results-of-all_users-in-company/{company_id}")
+async def get_results_of_all_users_in_company(company_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
+    service = QuizService(db)
+    result = await service.get_results_of_all_users_in_company(company_id, current_user)
+    return result
