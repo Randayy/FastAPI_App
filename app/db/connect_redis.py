@@ -74,8 +74,3 @@ async def retrieve_data_from_redis():
         else:
             print("Not found")
 
-# asyncio.run(store_data_in_redis())
-
-# asyncio.run(retrieve_data_from_redis())
-
-# asyncio.run(check_redis_connection())
