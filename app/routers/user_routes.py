@@ -11,7 +11,7 @@ from app.auth.jwtauth import JWTAuth
 from uuid import UUID
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import Annotated
-from app.db.user_models import User, ExportType
+from app.db.user_models import User
 from app.auth.jwtauth import oauth2_scheme
 from fastapi.security import HTTPAuthorizationCredentials
 from app.services.user_service import get_current_user_from_token
@@ -90,17 +90,10 @@ async def get_my_quiz_results(quiz_id: UUID,redis_id:int, db: AsyncSession = Dep
     results = await service.get_data_from_redis(key)
     return results
 
-@user_router.post("/get-my-results-from/{quiz_id}/{type}")
-async def get_my_quiz_results(type:ExportType,quiz_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
+@user_router.post("/get-my-quiz-results/{quiz_id}")
+async def get_my_quiz_results(quiz_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
     service = QuizService(db)
     current_user_id = current_user.id
-    results = await service.get_all_user_answer_records(current_user_id, quiz_id, type)
+    results = await service.get_all_user_answer_records(current_user_id, quiz_id)
     return results
-
-@user_router.post("/get-my-rating")
-async def get_my_rating(db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
-    service = QuizService(db)
-    current_user_id = current_user.id
-    rating = await service.get_user_avarage_mark_from_all_quizzes(current_user_id)
-    return rating
 

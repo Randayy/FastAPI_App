@@ -341,6 +341,15 @@ class QuizRepository:
         if not user_answers:
             raise HTTPException(status_code=404, detail="User answers not found")
         return user_answers
+    
+    # be-14
+    async def get_quiz_ids_of_company(self, company_id: UUID) -> List[UUID]:
+        quizzes = await self.db.execute(select(Quiz).where(Quiz.company_id == company_id))
+        quizzes = quizzes.scalars().all()
+        if not quizzes:
+            raise HTTPException(status_code=404, detail="Quizzes not found")
+        quiz_ids = [quiz.id for quiz in quizzes]
+        return quiz_ids
 
     # be-14
     async def get_quiz_ids_of_company(self, company_id: UUID) -> List[UUID]:

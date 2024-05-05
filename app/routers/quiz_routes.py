@@ -87,8 +87,6 @@ async def get_quiz_results(company_id: UUID, quiz_id: UUID, db: AsyncSession = D
     return result
 
 # get all quizzes avarage mark
-
-
 @quiz_router.get("/company/{user_id}/avarage-mark-from-quizzes")
 async def get_user_avarage_mark_from_quizzes(user_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
     service = QuizService(db)
@@ -96,23 +94,23 @@ async def get_user_avarage_mark_from_quizzes(user_id: UUID, db: AsyncSession = D
     return result
 
 # get all quizzes user avarage mark in company
-
-
 @quiz_router.get("/company/{company_id}/user/{user_id}/avarage-mark-from-quizzes")
 async def get_user_avarage_mark_from_quizzes_in_company(company_id: UUID, user_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
     service = QuizService(db)
     result = await service.get_user_avarage_mark_from_quizzes_in_company(user_id, company_id, current_user)
     return result
 
-
 @quiz_router.get("/get-saved-results-redis/{key}")
-async def get_saved_results_redis(key: str, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
+async def get_saved_results_redis(key: str,db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
     service = QuizService(db)
     result = await service.get_data_from_redis(key)
     return result
 
-# be-14
-
+@quiz_router.get("/get-results-of-user-from-redis/{user_id}")
+async def get_results_of_user_from_redis(user_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
+    service = QuizService(db)
+    result = await service.get_results_of_user_from_redis(user_id)
+    return result
 
 @quiz_router.get("/get-results-of-user-in-company/{company_id}/{user_id}")
 async def get_results_of_user_in_company(company_id: UUID, user_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
@@ -120,10 +118,8 @@ async def get_results_of_user_in_company(company_id: UUID, user_id: UUID, db: As
     result = await service.get_results_of_user_in_company(user_id, company_id, current_user)
     return result
 
-
 @quiz_router.get("/get-results-of-all_users-in-company/{company_id}")
 async def get_results_of_all_users_in_company(company_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
     service = QuizService(db)
     result = await service.get_results_of_all_users_in_company(company_id, current_user)
     return result
-
