@@ -21,6 +21,7 @@ from app.core.config import Settings
 import aioredis
 import csv
 
+
 class QuizService:
     def __init__(self, db: AsyncSession):
         self.quiz_repository = QuizRepository(db)
@@ -133,7 +134,7 @@ class QuizService:
     async def get_user_answers_by_result_id(self, result_id: UUID):
         user_answers = await self.quiz_repository.get_user_answers_by_result_id(result_id)
         return user_answers
-    
+
     async def get_data_from_redis(self, key: str):
         redis_client = RedisClient()
         data = await redis_client.get_data(key)
@@ -143,18 +144,18 @@ class QuizService:
         else:
             raise HTTPException(
                 status_code=404, detail="Data not found in Redis")
-        
-    async def get_all_user_answer_records(self,user_id: UUID,quiz_id: UUID):
+
+    async def get_all_user_answer_records(self, user_id: UUID, quiz_id: UUID):
         redis_client = RedisClient()
         user_answer_records = []
         async for key in redis_client.scan_iter(f'user_answer:{user_id}:{quiz_id}:*'):
             data = await redis_client.get_data(key)
             data = json.loads(data)
             user_answer_records.append(data)
-        
+
         await self.save_user_answers_to_csv(user_answer_records)
         return user_answer_records
-    
+
     async def save_user_answers_to_csv(self, user_answer_records: list):
         with open('user_answer_records.csv', 'w', newline='') as csvfile:
             fieldnames = user_answer_records[0].keys()
@@ -267,38 +268,25 @@ class QuizService:
         return {"message": f"Avarage mark from quizzes for user with id:{user_id} in company with id:{company_id}", "avarage_mark": avarage_mark}
 
     # be-14
-    async def check_if_current_user_is_admin_or_owner_in_company(self, current_user_id: UUID, company_id: UUID):
-        await self.quiz_repository.check_if_current_user_is_admin_or_owner_in_company(current_user_id, company_id)
-
-    async def get_results_of_user_from_redis(self, user_id: UUID):
-        redis_client = RedisClient()
-        key = f"user_answer:{user_id}:*"
-        data = await redis_client.get_data(key)
-        if data:
-            data = json.loads(data)
-            return data
-        else:
-            raise HTTPException(
-                status_code=404, detail="Data not found in Redis")
-        
-    async def get_results_of_user_in_company(self, user_id: UUID,company_id: UUID,current_user: User):
+    async def get_results_of_user_in_company(self, user_id: UUID, company_id: UUID, current_user: User):
         current_user_id = current_user.id
         await self.check_if_user_is_admin_or_owner_in_company(current_user_id, company_id)
         await self.check_if_user_member_of_company(user_id, company_id)
         quiz_ids_of_this_company = await self.quiz_repository.get_quiz_ids_of_company(company_id)
         user_result_all = []
         for quiz_id in quiz_ids_of_this_company:
-            user_result = await self.get_user_results_of_quizzes_in_company(user_id,quiz_id)
+            user_result = await self.get_user_results_of_quizzes_in_company(user_id, quiz_id)
             if user_result:
                 user_result_all.append(user_result)
             if not user_result_all:
-                raise HTTPException(status_code=404, detail="Results not found for this user in")
-        
-        user_result_all = {"quiz_id": quiz_id,"quiz_results": user_result_all}
+                raise HTTPException(
+                    status_code=404, detail="Results not found for this user in")
+
+        user_result_all = {"quiz_id": quiz_id, "quiz_results": user_result_all}
 
         return {"message": f"Results of user with id:{user_id} in company with id:{company_id}", "results": user_result_all}
 
-    async def get_user_results_of_quizzes_in_company(self, user_id: UUID,quiz_id: UUID):
+    async def get_user_results_of_quizzes_in_company(self, user_id: UUID, quiz_id: UUID):
         redis_client = RedisClient()
         user_answer_records = []
         async for key in redis_client.scan_iter(f'user_answer:{user_id}:{quiz_id}:*'):
@@ -307,9 +295,8 @@ class QuizService:
             if data:
                 user_answer_records.append(data)
 
-
         return user_answer_records
-    
+
     async def get_results_of_all_users_in_quiz_id(self, quiz_id: UUID):
         redis_client = RedisClient()
         user_answer_records = []
@@ -318,9 +305,9 @@ class QuizService:
             data = json.loads(data)
             if data:
                 user_answer_records.append(data)
-        
+
         return user_answer_records
-    
+
     async def get_results_of_all_users_in_company(self, company_id: UUID, current_user: User):
         current_user_id = current_user.id
         await self.check_if_user_is_admin_or_owner_in_company(current_user_id, company_id)
@@ -331,6 +318,7 @@ class QuizService:
             if results:
                 all_results.append(results)
         if not all_results:
-            raise HTTPException(status_code=404, detail="Results not found for this company")
-        
+            raise HTTPException(
+                status_code=404, detail="Results not found for this company")
+
         return {"message": f"Results of all users in company with id:{company_id}", "results": all_results}
