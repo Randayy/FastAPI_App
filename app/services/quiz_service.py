@@ -145,16 +145,17 @@ class QuizService:
             raise HTTPException(
                 status_code=404, detail="Data not found in Redis")
 
-    async def get_all_user_answer_records(self, user_id: UUID, quiz_id: UUID):
+    async def get_all_user_answer_records(self, user_id: UUID, quiz_id: UUID, type: str):
         redis_client = RedisClient()
         user_answer_records = []
         async for key in redis_client.scan_iter(f'user_answer:{user_id}:{quiz_id}:*'):
             data = await redis_client.get_data(key)
             data = json.loads(data)
             user_answer_records.append(data)
-
-        await self.save_user_answers_to_csv(user_answer_records)
-        await self.save_user_answers_to_json(user_answer_records)
+        if type == "csv":
+            await self.save_user_answers_to_csv(user_answer_records)
+        elif type == "json":
+            await self.save_user_answers_to_json(user_answer_records)
         return user_answer_records
 
     async def save_user_answers_to_csv(self, user_answer_records: list):

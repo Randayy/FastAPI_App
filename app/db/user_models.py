@@ -65,6 +65,10 @@ class ActionStatus(Enum):
     REJECTED = 'rejected'
     CANCELLED = 'cancelled'
 
+class ExportType(Enum):
+    CSV = 'csv'
+    JSON = 'json'
+
 
 class Action(BaseTable):
     __tablename__ = 'actions'
