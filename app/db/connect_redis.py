@@ -30,8 +30,7 @@ class RedisClient:
     
     async def set_data(self, key, value,expire_time=172800):
         redis = await self.get_redis()
-        await redis.set(key, value)
-        await redis.expire(key, expire_time)
+        await redis.set(key, value, expire_time=expire_time)
 
 
 async def check_redis_connection():
@@ -66,8 +65,3 @@ async def retrieve_data_from_redis():
         else:
             print("Not found")
 
-# asyncio.run(store_data_in_redis())
-
-# asyncio.run(retrieve_data_from_redis())
-
-# asyncio.run(check_redis_connection())
