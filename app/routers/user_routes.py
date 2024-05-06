@@ -97,3 +97,10 @@ async def get_my_quiz_results(quiz_id: UUID, db: AsyncSession = Depends(get_sess
     results = await service.get_all_user_answer_records(current_user_id, quiz_id)
     return results
 
+@user_router.post("/get-my-rating")
+async def get_my_rating(db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
+    service = QuizService(db)
+    current_user_id = current_user.id
+    rating = await service.get_user_avarage_mark_from_all_quizzes(current_user_id)
+    return rating
+

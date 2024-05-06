@@ -154,6 +154,7 @@ class QuizService:
             user_answer_records.append(data)
 
         await self.save_user_answers_to_csv(user_answer_records)
+        await self.save_user_answers_to_json(user_answer_records)
         return user_answer_records
 
     async def save_user_answers_to_csv(self, user_answer_records: list):
@@ -165,6 +166,10 @@ class QuizService:
             for record in user_answer_records:
                 writer.writerow(record)
 
+    async def save_user_answers_to_json(self, user_answer_records: list):
+        with open('user_answer_records.json', 'w') as jsonfile:
+            json.dump(user_answer_records, jsonfile)
+        
     async def save_user_answers_to_redis(self, result_id: UUID):
         redis_client = RedisClient()
 
@@ -322,3 +327,18 @@ class QuizService:
                 status_code=404, detail="Results not found for this company")
 
         return {"message": f"Results of all users in company with id:{company_id}", "results": all_results}
+    
+
+# be-15
+    async def get_user_avarage_mark_from_all_quizzes(self,current_user_id: UUID):
+        results = await self.quiz_repository.get_user_results_of_quizzes(current_user_id)
+        if not results:
+            raise HTTPException(
+                status_code=404, detail="Results not found for you")
+        sum_of_scores = 0
+        quizzes = 0
+        for result in results:
+            sum_of_scores += result.score
+            quizzes += 1
+        avarage_mark = sum_of_scores/quizzes
+        return {"message": f"Avarage mark from you", "avarage_mark": avarage_mark}
