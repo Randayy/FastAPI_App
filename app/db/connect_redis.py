@@ -33,6 +33,15 @@ class RedisClient:
         await redis.set(key, value, expire_time=expire_time)
 
 
+    async def scan_iter(self, match_pattern):
+        redis = await self.get_redis()
+        cursor = '0'
+        while cursor != 0:
+            cursor, keys = await redis.scan(cursor, match=match_pattern)
+            for key in keys:
+                yield key
+
+
 async def check_redis_connection():
     Redis_client = RedisClient()
     await Redis_client.connect()
