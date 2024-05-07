@@ -22,3 +22,14 @@ class AnswerQuestionListSchema(BaseModel):
 
     class Config:
         from_attributes=True
+
+class UserAnswerSchemaRedis(BaseModel):
+    question_id: UUID
+    answer_id: UUID
+    user_id: UUID
+    quiz_id: UUID
+    company_id: UUID
+    is_correct: bool
+
+    class Config:
+        from_attributes=True

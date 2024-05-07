@@ -261,6 +261,7 @@ class QuizRepository:
             self.db.add_all(answers)
 
         await self.db.commit()
+        return answers
         
     async def submit_quiz_result(self, correct_answers: int, questions: int, quiz_id: UUID, current_user_id: UUID):
         score = correct_answers/questions
@@ -300,3 +301,44 @@ class QuizRepository:
                 status_code=404, detail="You have not submitted any quiz in this company yet")
 
         return results
+    
+    # be-13
+    async def get_user_id_by_result_id(self, result_id: UUID):
+        result = await self.db.execute(select(Result).where(Result.id == result_id))
+        result = result.scalars().first()
+        if not result:
+            raise HTTPException(status_code=404, detail="Result not found")
+        user_id = result.user_id
+        return user_id
+    
+    async def get_quiz_id_by_result_id(self, result_id: UUID):
+        result = await self.db.execute(select(Result).where(Result.id == result_id))
+        result = result.scalars().first()
+        if not result:
+            raise HTTPException(status_code=404, detail="Result not found")
+        quiz_id = result.quiz_id
+        return quiz_id
+        
+    async def get_company_id_by_quiz_id(self, quiz_id: UUID):
+        quiz = await self.db.execute(select(Quiz).where(Quiz.id == quiz_id))
+        quiz = quiz.scalars().first()
+        if not quiz:
+            raise HTTPException(status_code=404, detail="Quiz not found")
+        company_id = quiz.company_id
+        return company_id
+    
+    async def check_if_user_answer_is_correct(self,user_answer_id:UUID,user_answer_question_id:UUID):
+        correct_answer_id = await self.db.execute(select(Answer.id).where(Answer.question_id == user_answer_question_id).where(Answer.is_correct == True))
+        correct_answer_id = correct_answer_id.scalars().first()
+        if not correct_answer_id:
+            raise HTTPException(status_code=404, detail="Correct answer not found for this question")
+        return user_answer_id == correct_answer_id
+    
+
+    async def get_user_answers_by_result_id(self, result_id: UUID)->List[UserAnswer]:
+        user_answers = await self.db.execute(select(UserAnswer).where(UserAnswer.result_id == result_id))
+        user_answers = user_answers.scalars().all()
+        if not user_answers:
+            raise HTTPException(status_code=404, detail="User answers not found")
+        return user_answers
+
