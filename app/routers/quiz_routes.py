@@ -126,3 +126,4 @@ async def get_results_of_all_users_in_company(company_id: UUID, db: AsyncSession
     service = QuizService(db)
     result = await service.get_results_of_all_users_in_company(company_id, current_user)
     return result
+

@@ -171,6 +171,7 @@ class QuizService:
         with open('user_answer_records.json', 'w') as jsonfile:
             json.dump(user_answer_records, jsonfile)
         
+
     async def save_user_answers_to_redis(self, result_id: UUID):
         redis_client = RedisClient()
 
