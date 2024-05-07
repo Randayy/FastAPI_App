@@ -22,6 +22,7 @@ import aioredis
 import csv
 
 
+
 class QuizService:
     def __init__(self, db: AsyncSession):
         self.quiz_repository = QuizRepository(db)
@@ -135,6 +136,7 @@ class QuizService:
         user_answers = await self.quiz_repository.get_user_answers_by_result_id(result_id)
         return user_answers
 
+
     async def get_data_from_redis(self, key: str):
         redis_client = RedisClient()
         data = await redis_client.get_data(key)
@@ -171,11 +173,13 @@ class QuizService:
         with open('user_answer_records.json', 'w') as jsonfile:
             json.dump(user_answer_records, jsonfile)
         
+
     async def save_user_answers_to_redis(self, result_id: UUID):
         redis_client = RedisClient()
 
         user_answer_list = await self.get_user_answers_by_result_id(result_id)
         redis_id = 0
+
         for user_answer in user_answer_list:
             user_answer_id = user_answer.answer_id
             user_answer_question_id = user_answer.question_id
@@ -194,6 +198,7 @@ class QuizService:
                 "is_correct": is_correct
             }
             save_data = json.dumps(save_data)
+
 
             key = f"user_answer:{user_answer_user_id}:{user_answer_quiz_id}:{redis_id}"
             redis_id += 1

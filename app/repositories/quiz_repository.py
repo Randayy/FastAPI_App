@@ -341,6 +341,7 @@ class QuizRepository:
         if not user_answers:
             raise HTTPException(status_code=404, detail="User answers not found")
         return user_answers
+
     
     # be-14
     async def get_quiz_ids_of_company(self, company_id: UUID) -> List[UUID]:
