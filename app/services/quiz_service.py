@@ -6,7 +6,7 @@ import bcrypt
 from app.schemas.user_answer_schemas import AnswerQuestionListSchema, UserAnswerSchemaRedis
 import logging
 from fastapi import HTTPException
-from app.db.user_models import User, Quiz, Question, Answer, Company, Result, UserAnswer
+from app.db.user_models import User, Quiz, Question, Answer, Company, Result, UserAnswer, ExportType
 from uuid import UUID
 from typing import Annotated
 from app.auth.jwtauth import oauth2_scheme
@@ -21,6 +21,7 @@ from app.core.config import Settings
 import aioredis
 import csv
 from collections import defaultdict
+
 
 
 class QuizService:
@@ -145,6 +146,10 @@ class QuizService:
         else:
             raise HTTPException(
                 status_code=404, detail="Data not found in Redis")
+        
+    async def save_user_answers_to_json(self, user_answer_records: list):
+        with open('user_answer_records.json', 'w') as jsonfile:
+            json.dump(user_answer_records, jsonfile)
 
     async def get_all_user_answer_records(self, user_id: UUID, quiz_id: UUID):
         redis_client = RedisClient()
@@ -156,6 +161,19 @@ class QuizService:
 
         await self.save_user_answers_to_csv(user_answer_records)
         return user_answer_records
+    
+    async def get_all_user_answer_records(self, user_id: UUID, quiz_id: UUID, type: str):
+         redis_client = RedisClient()
+         user_answer_records = []
+         async for key in redis_client.scan_iter(f'user_answer:{user_id}:{quiz_id}:*'):
+             data = await redis_client.get_data(key)
+             data = json.loads(data)
+             user_answer_records.append(data)
+         if type == ExportType.CSV:
+             await self.save_user_answers_to_csv(user_answer_records)
+         elif type == ExportType.JSON:
+             await self.save_user_answers_to_json(user_answer_records)
+         return user_answer_records
 
     async def save_user_answers_to_csv(self, user_answer_records: list):
         with open('user_answer_records.csv', 'w', newline='') as csvfile:
