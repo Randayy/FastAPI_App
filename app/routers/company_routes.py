@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, status
 from app.db.user_models import User, Company
 from app.schemas.company_schemas import CompanyCreateSchema, CompanyActionSchema
 from app.services.company_services import CompanyService
+from app.services.quiz_service import QuizService
 from app.services.user_service import get_current_user_from_token
 from uuid import UUID
 
@@ -138,11 +139,14 @@ async def reject_join_request(company_id: UUID, user_id: UUID, db: AsyncSession 
     return CompanyActionSchema(message="Join request rejected successfully!", company_id=company_id, user_id=user_id)
 
 # BE-10
+
+
 @company_router.get("/companies/{company_id}/promote-user-to-admin{user_id}")
 async def promote_user_to_admin(company_id: UUID, user_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
     service = CompanyService(db)
     await service.promote_user_to_admin(company_id, user_id, current_user)
     return CompanyActionSchema(message="User promoted to admin successfully!", company_id=company_id, user_id=user_id)
+
 
 @company_router.get("/companies/{company_id}/demote-admin-to-user{user_id}")
 async def demote_admin_to_user(company_id: UUID, user_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
@@ -150,7 +154,28 @@ async def demote_admin_to_user(company_id: UUID, user_id: UUID, db: AsyncSession
     await service.demote_admin_to_member(company_id, user_id, current_user)
     return CompanyActionSchema(message="Admin demoted to user successfully!", company_id=company_id, user_id=user_id)
 
+
 @company_router.get("/companies/{company_id}/admins")
 async def get_company_admins(company_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
     service = CompanyService(db)
     return await service.get_company_admins(company_id, current_user)
+
+# 15
+
+
+@company_router.get("/companies/get-avarage-marks-all-members/{company_id}")
+async def get_avarage_marks_all_members(company_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
+    service = QuizService(db)
+    return await service.get_avarage_marks_all_members(current_user, company_id)
+
+
+@company_router.get("/companies/{company_id}/get-avarage-marks-of-user/{user_id}")
+async def get_avarage_marks_of_user(company_id: UUID, user_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
+    service = QuizService(db)
+    return await service.get_avarage_marks_of_member(current_user, company_id, user_id)
+
+
+@company_router.get("/companies/{company_id}/get-members-and-last-quiz-submition")
+async def get_members_and_last_quiz_submition(company_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
+    service = QuizService(db)
+    return await service.get_members_and_last_quiz_submition(current_user, company_id)

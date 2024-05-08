@@ -82,13 +82,15 @@ async def get_my_requests(db: AsyncSession = Depends(get_session), current_user:
 
 
 # be-14
-@user_router.post("/get-my-quiz-results/{quiz_id}/{redis_id}") # it is number of user_answer in redis (special id if user need to get only answers with this id)
-async def get_my_quiz_results(quiz_id: UUID,redis_id:int, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
+# it is number of user_answer in redis (special id if user need to get only answers with this id)
+@user_router.post("/get-my-quiz-results/{quiz_id}/{redis_id}")
+async def get_my_quiz_results(quiz_id: UUID, redis_id: int, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
     service = QuizService(db)
     current_user_id = current_user.id
     key = f"user_answer:{current_user_id}:{quiz_id}:{redis_id}"
     results = await service.get_data_from_redis(key)
     return results
+
 
 @user_router.post("/get-my-quiz-results/{quiz_id}")
 async def get_my_quiz_results(quiz_id: UUID, db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
@@ -96,4 +98,28 @@ async def get_my_quiz_results(quiz_id: UUID, db: AsyncSession = Depends(get_sess
     current_user_id = current_user.id
     results = await service.get_all_user_answer_records(current_user_id, quiz_id)
     return results
+# be-15
 
+
+@user_router.post("/get-my-rating")
+async def get_my_rating(db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
+    service = QuizService(db)
+    current_user_id = current_user.id
+    rating = await service.get_user_rating(current_user_id)
+    return rating
+
+
+@user_router.post("/get-my-list-of-avarage-marks")
+async def get_my_list_of_avarage_marks(db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
+    service = QuizService(db)
+    current_user_id = current_user.id
+    rating = await service.get_average_scores(current_user_id)
+    return rating
+
+
+@user_router.post("/get-my-submited-quizzes")
+async def get_my_submited_quizzes(db: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user_from_token)):
+    service = QuizService(db)
+    current_user_id = current_user.id
+    list_quizzes = await service.get_list_of_quizzes_which_i_submit(current_user_id)
+    return list_quizzes

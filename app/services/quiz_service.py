@@ -20,6 +20,7 @@ import asyncio
 from app.core.config import Settings
 import aioredis
 import csv
+from collections import defaultdict
 
 
 class QuizService:
@@ -322,3 +323,78 @@ class QuizService:
                 status_code=404, detail="Results not found for this company")
 
         return {"message": f"Results of all users in company with id:{company_id}", "results": all_results}
+
+    async def get_user_rating(self, user_id: UUID):
+        results = await self.quiz_repository.get_user_results_of_quizzes(user_id)
+        sum_of_scores = 0
+        quizzes = 0
+        for result in results:
+            sum_of_scores += result.score
+            quizzes += 1
+        avarage_mark = sum_of_scores/quizzes
+        return {"message": f"Avarage mark from quizzes for user with id:{user_id}", "avarage_mark": avarage_mark}
+
+    async def get_score_from_result(self, result_id: UUID):
+        result = await self.quiz_repository.get_score_from_result(result_id)
+        return result
+
+    async def get_average_scores(self, user_id: UUID):
+        results = await self.quiz_repository.get_user_results_of_quizzes_for(user_id)
+        if results == None:
+            return None
+        sum_of_scores = 0
+        quizzes = 0
+        list_of_avarage_marks = []
+        for result in results:
+            sum_of_scores += result.score
+            quizzes += 1
+            avarage_mark = sum_of_scores/quizzes
+
+            list_of_avarage_marks.append(
+                {"quiz_id": result.quiz_id, "avarage_mark": avarage_mark, "score": result.score, "result_id": result.id})
+
+        return list_of_avarage_marks
+
+    async def get_list_of_quizzes_which_i_submit(self, user_id: UUID):
+        results = await self.quiz_repository.get_user_results_of_quizzes(user_id)
+        list_of_quizzes = []
+        for result in results:
+            quiz = await self.quiz_repository.get_quiz_by_id(result.quiz_id)
+            quiz['score'] = result.score
+            quiz['date'] = result.created_at
+            list_of_quizzes.append(quiz)
+        return list_of_quizzes
+
+    async def get_avarage_marks_all_members(self, current_user: User, company_id: UUID):
+        current_user_id = current_user.id
+        await self.check_if_user_is_admin_or_owner_in_company(current_user_id, company_id)
+        all_members = await self.quiz_repository.get_all_members_of_company(company_id)
+        all_members_avarage_marks = []
+        for member in all_members:
+            member_id = member.user_id
+            member_avarage_mark = await self.get_average_scores(member_id)
+            if member_avarage_mark != None:
+                all_members_avarage_marks.append(member_avarage_mark)
+
+        return all_members_avarage_marks
+
+    async def get_avarage_marks_of_member(self, current_user: User, company_id: UUID, user_id: UUID):
+        current_user_id = current_user.id
+        await self.check_if_user_is_admin_or_owner_in_company(current_user_id, company_id)
+        await self.check_if_user_member_of_company(user_id, company_id)
+        member_avarage_marks = await self.get_average_scores(user_id)
+        return member_avarage_marks
+
+    async def get_members_and_last_quiz_submition(self, current_user: User, company_id: UUID):
+        current_user_id = current_user.id
+        await self.check_if_user_is_admin_or_owner_in_company(current_user_id, company_id)
+        all_members = await self.quiz_repository.get_all_members_of_company(company_id)
+        members_last_quiz_submition = []
+        for member in all_members:
+            member_id = member.user_id
+            last_quiz_submition = await self.quiz_repository.get_last_quiz_submition(member_id)
+            if last_quiz_submition != None:
+                members_last_quiz_submition.append(
+                    {"user_id": member_id, "quiz_id": last_quiz_submition.quiz_id, "last_quiz_submition": last_quiz_submition.created_at})
+
+        return members_last_quiz_submition
