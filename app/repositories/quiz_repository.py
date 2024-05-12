@@ -2,7 +2,7 @@ from app.db.user_models import User, Quiz, Company, Question, Answer, CompanyMem
 from app.schemas.quiz_shemas import QuizResponseSchema, QuizSchema, QuestionSchema, AnswerSchema
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
-from app.db.user_models import User, Role, Result, UserAnswer
+from app.db.user_models import User, Role, Result, UserAnswer, Notification
 from fastapi import HTTPException
 from sqlalchemy import select
 import logging
@@ -131,6 +131,14 @@ class QuizRepository:
 
         self.db.add_all(questions)
         self.db.add_all(answers)
+        users = await self.db.execute(select(CompanyMember).where(CompanyMember.company_id == company_id))
+        users = users.scalars().all()
+        notifications = []
+        for user in users:
+            notification = Notification(text=f"A new quiz '{new_quiz.title}' has been created. You are invited to take it.", user_id=user.user_id)
+            notifications.append(notification)
+        self.db.add_all(notifications)
+
         await self.db.commit()
         await self.db.refresh(new_quiz)
         quiz_dict = new_quiz.__dict__
