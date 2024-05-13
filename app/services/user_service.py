@@ -5,7 +5,7 @@ from app.schemas.user_schemas import SignUpRequestSchema, UserDetailSchema, User
 import bcrypt
 import logging
 from fastapi import HTTPException
-from app.db.user_models import User
+from app.db.user_models import User, NotificationStatus
 from uuid import UUID
 from app.utils.utils import verify_password, hash_password
 from typing import Annotated
@@ -157,3 +157,18 @@ class UserService:
     async def get_my_requests(self, current_user: User) -> List[UserRequestSchema]:
         user_requests = await self.user_repository.get_my_requests(current_user.id)
         return UserInvitationListSchema(invitations=[UserInvitationSchema.from_orm(request) for request in user_requests])
+
+    async def get_my_notifications(self, user_id):
+        notifications = await self.user_repository.get_notifications(user_id)
+        return notifications
+    
+    async def check_if_notification_status_is_read(self, notification_id):
+        notification = await self.user_repository.get_notification_by_id(notification_id)
+        if notification.status == NotificationStatus.READ:
+            raise HTTPException(
+                status_code=400, detail="Notification already read")
+    
+    async def mark_notification_as_read(self, notification_id):
+        await self.check_if_notification_status_is_read(notification_id)
+        notification = await self.user_repository.mark_notification_as_read(notification_id)
+        return {"message": f"Notification marked as read"}

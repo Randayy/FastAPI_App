@@ -23,6 +23,7 @@ class User(BaseTable):
     actions = relationship('Action', back_populates='user')
 
 
+
 class Company(BaseTable):
     __tablename__ = 'company'
 
@@ -56,6 +57,7 @@ class CompanyMember(BaseTable):
 
     __table_args__ = (UniqueConstraint(
         'company_id', 'user_id', name='_company_user_uc'),)
+    notifications = relationship('Notification', back_populates='user')
 
 
 class ActionStatus(Enum):
@@ -142,3 +144,16 @@ class UserAnswer(BaseTable):
     result = relationship('Result')
     question = relationship('Question')
     answer = relationship('Answer')
+
+class NotificationStatus(Enum):
+    UNREAD = 'unread'
+    READ = 'read'
+
+class Notification(BaseTable):
+    __tablename__ = 'notifications'
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    status = Column(EnumColumn(NotificationStatus), default=NotificationStatus.UNREAD)
+    text = Column(String(500), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('company_members.user_id', ondelete='CASCADE'), nullable=False)
+    user = relationship('CompanyMember', back_populates='notifications')
