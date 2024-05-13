@@ -1,4 +1,4 @@
-from app.db.user_models import User, Action, ActionStatus
+from app.db.user_models import User, Action, ActionStatus, Notification , NotificationStatus
 from app.schemas.user_schemas import SignUpRequestSchema, UserUpdateRequestSchema, UserListSchema, UserDetailSchema, UserInvitationSchema
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
@@ -86,3 +86,21 @@ class UserRepository:
         my_requests = await self.db.execute(select(Action).where(Action.user_id == id).where(Action.status == ActionStatus.REQUESTED))
         my_requests = my_requests.scalars().all()
         return my_requests
+    
+    async def get_notifications(self, user_id):
+        notifications = await self.db.execute(select(Notification).where(Notification.user_id == user_id))
+        notifications = notifications.scalars().all()
+        return notifications
+    
+    async def mark_notification_as_read(self, notification_id):
+        notification = await self.db.execute(select(Notification).where(Notification.id == notification_id))
+        notification = notification.scalars().first()
+        notification.status = NotificationStatus.READ
+        self.db.add(notification)
+        await self.db.commit()
+        return notification
+
+    async def get_notification_by_id(self, notification_id):
+        notification = await self.db.execute(select(Notification).where(Notification.id == notification_id))
+        notification = notification.scalars().first()
+        return notification
