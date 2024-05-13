@@ -6,7 +6,7 @@ import bcrypt
 from app.schemas.user_answer_schemas import AnswerQuestionListSchema, UserAnswerSchemaRedis
 import logging
 from fastapi import HTTPException
-from app.db.user_models import User, Quiz, Question, Answer, Company, Result, UserAnswer
+from app.db.user_models import User, Quiz, Question, Answer, Company, Result, UserAnswer, ExportType
 from uuid import UUID
 from typing import Annotated
 from app.auth.jwtauth import oauth2_scheme
@@ -20,6 +20,8 @@ import asyncio
 from app.core.config import Settings
 import aioredis
 import csv
+from collections import defaultdict
+
 
 
 class QuizService:
@@ -144,19 +146,34 @@ class QuizService:
         else:
             raise HTTPException(
                 status_code=404, detail="Data not found in Redis")
+        
+    async def save_user_answers_to_json(self, user_answer_records: list):
+        with open('user_answer_records.json', 'w') as jsonfile:
+            json.dump(user_answer_records, jsonfile)
 
-    async def get_all_user_answer_records(self, user_id: UUID, quiz_id: UUID, type: str):
+    async def get_all_user_answer_records(self, user_id: UUID, quiz_id: UUID):
         redis_client = RedisClient()
         user_answer_records = []
         async for key in redis_client.scan_iter(f'user_answer:{user_id}:{quiz_id}:*'):
             data = await redis_client.get_data(key)
             data = json.loads(data)
             user_answer_records.append(data)
-        if type == "csv":
-            await self.save_user_answers_to_csv(user_answer_records)
-        elif type == "json":
-            await self.save_user_answers_to_json(user_answer_records)
+
+        await self.save_user_answers_to_csv(user_answer_records)
         return user_answer_records
+    
+    async def get_all_user_answer_records(self, user_id: UUID, quiz_id: UUID, type: str):
+         redis_client = RedisClient()
+         user_answer_records = []
+         async for key in redis_client.scan_iter(f'user_answer:{user_id}:{quiz_id}:*'):
+             data = await redis_client.get_data(key)
+             data = json.loads(data)
+             user_answer_records.append(data)
+         if type == ExportType.CSV:
+             await self.save_user_answers_to_csv(user_answer_records)
+         elif type == ExportType.JSON:
+             await self.save_user_answers_to_json(user_answer_records)
+         return user_answer_records
 
     async def save_user_answers_to_csv(self, user_answer_records: list):
         with open('user_answer_records.csv', 'w', newline='') as csvfile:
@@ -166,11 +183,6 @@ class QuizService:
             writer.writeheader()
             for record in user_answer_records:
                 writer.writerow(record)
-
-    async def save_user_answers_to_json(self, user_answer_records: list):
-        with open('user_answer_records.json', 'w') as jsonfile:
-            json.dump(user_answer_records, jsonfile)
-        
 
     async def save_user_answers_to_redis(self, result_id: UUID):
         redis_client = RedisClient()
@@ -329,18 +341,78 @@ class QuizService:
                 status_code=404, detail="Results not found for this company")
 
         return {"message": f"Results of all users in company with id:{company_id}", "results": all_results}
-    
 
-# be-15
-    async def get_user_avarage_mark_from_all_quizzes(self,current_user_id: UUID):
-        results = await self.quiz_repository.get_user_results_of_quizzes(current_user_id)
-        if not results:
-            raise HTTPException(
-                status_code=404, detail="Results not found for you")
+    async def get_user_rating(self, user_id: UUID):
+        results = await self.quiz_repository.get_user_results_of_quizzes(user_id)
         sum_of_scores = 0
         quizzes = 0
         for result in results:
             sum_of_scores += result.score
             quizzes += 1
         avarage_mark = sum_of_scores/quizzes
-        return {"message": f"Avarage mark from you", "avarage_mark": avarage_mark}
+        return {"message": f"Avarage mark from quizzes for user with id:{user_id}", "avarage_mark": avarage_mark}
+
+    async def get_score_from_result(self, result_id: UUID):
+        result = await self.quiz_repository.get_score_from_result(result_id)
+        return result
+
+    async def get_average_scores(self, user_id: UUID):
+        results = await self.quiz_repository.get_user_results_of_quizzes_for(user_id)
+        if results == None:
+            return None
+        sum_of_scores = 0
+        quizzes = 0
+        list_of_avarage_marks = []
+        for result in results:
+            sum_of_scores += result.score
+            quizzes += 1
+            avarage_mark = sum_of_scores/quizzes
+
+            list_of_avarage_marks.append(
+                {"quiz_id": result.quiz_id, "avarage_mark": avarage_mark, "score": result.score, "result_id": result.id})
+
+        return list_of_avarage_marks
+
+    async def get_list_of_quizzes_which_i_submit(self, user_id: UUID):
+        results = await self.quiz_repository.get_user_results_of_quizzes(user_id)
+        list_of_quizzes = []
+        for result in results:
+            quiz = await self.quiz_repository.get_quiz_by_id(result.quiz_id)
+            quiz['score'] = result.score
+            quiz['date'] = result.created_at
+            list_of_quizzes.append(quiz)
+        return list_of_quizzes
+
+    async def get_avarage_marks_all_members(self, current_user: User, company_id: UUID):
+        current_user_id = current_user.id
+        await self.check_if_user_is_admin_or_owner_in_company(current_user_id, company_id)
+        all_members = await self.quiz_repository.get_all_members_of_company(company_id)
+        all_members_avarage_marks = []
+        for member in all_members:
+            member_id = member.user_id
+            member_avarage_mark = await self.get_average_scores(member_id)
+            if member_avarage_mark != None:
+                all_members_avarage_marks.append(member_avarage_mark)
+
+        return all_members_avarage_marks
+
+    async def get_avarage_marks_of_member(self, current_user: User, company_id: UUID, user_id: UUID):
+        current_user_id = current_user.id
+        await self.check_if_user_is_admin_or_owner_in_company(current_user_id, company_id)
+        await self.check_if_user_member_of_company(user_id, company_id)
+        member_avarage_marks = await self.get_average_scores(user_id)
+        return member_avarage_marks
+
+    async def get_members_and_last_quiz_submition(self, current_user: User, company_id: UUID):
+        current_user_id = current_user.id
+        await self.check_if_user_is_admin_or_owner_in_company(current_user_id, company_id)
+        all_members = await self.quiz_repository.get_all_members_of_company(company_id)
+        members_last_quiz_submition = []
+        for member in all_members:
+            member_id = member.user_id
+            last_quiz_submition = await self.quiz_repository.get_last_quiz_submition(member_id)
+            if last_quiz_submition != None:
+                members_last_quiz_submition.append(
+                    {"user_id": member_id, "quiz_id": last_quiz_submition.quiz_id, "last_quiz_submition": last_quiz_submition.created_at})
+
+        return members_last_quiz_submition

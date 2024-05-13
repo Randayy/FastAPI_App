@@ -226,12 +226,13 @@ class QuizRepository:
         result = await self.db.execute(select(Result).where(Result.quiz_id == quiz_id).where(Result.user_id == current_user_id))
         result = result.scalars().first()
         return result
-    
+
     async def check_if_quiz_exists(self, quiz_id: UUID) -> None:
         result = await self.db.execute(select(Quiz).where(Quiz.id == quiz_id))
         quiz = result.scalars().first()
         if not quiz:
             raise HTTPException(status_code=404, detail="Quiz not found")
+
     async def if_questions_exists_get_questions_ids_list(self, quiz_id: UUID) -> List[UUID]:
         questions = await self.db.execute(select(Question).where(Question.quiz_id == quiz_id))
         questions = questions.scalars().all()
@@ -240,13 +241,13 @@ class QuizRepository:
         question_ids = [question.id for question in questions]
         return question_ids
 
-    async def get_questions_answers_list_dicts(self, question_ids:List[UUID]) -> List[dict]:
+    async def get_questions_answers_list_dicts(self, question_ids: List[UUID]) -> List[dict]:
         questions_answers_list_dicts = []
         for question_id in question_ids:
             question_answers = await self.get_question_answers(question_id)
             questions_answers_list_dicts.append(question_answers)
         return questions_answers_list_dicts
-    
+
     async def save_user_answers(self, user_answers: dict, result_id: UUID):
         for answer in user_answers:
             question_id = answer['question_id']
@@ -262,7 +263,7 @@ class QuizRepository:
 
         await self.db.commit()
         return answers
-        
+
     async def submit_quiz_result(self, correct_answers: int, questions: int, quiz_id: UUID, current_user_id: UUID):
         score = correct_answers/questions
         quiz_result = Result(
@@ -292,7 +293,14 @@ class QuizRepository:
             raise HTTPException(
                 status_code=404, detail="You have not submitted any quiz yet")
         return results
-    
+
+    async def get_user_results_of_quizzes_for(self, user_id: UUID):
+        results = await self.db.execute(select(Result).where(Result.user_id == user_id))
+        results = results.scalars().all()
+        if not results:
+            return None
+        return results
+
     async def get_user_results_of_quizzes_in_company(self, company_id: UUID, user_id: UUID):
         results = await self.db.execute(select(Result).join(Quiz).where(Quiz.company_id == company_id).where(Result.user_id == user_id))
         results = results.scalars().all()
@@ -301,7 +309,7 @@ class QuizRepository:
                 status_code=404, detail="You have not submitted any quiz in this company yet")
 
         return results
-    
+
     # be-13
     async def get_user_id_by_result_id(self, result_id: UUID):
         result = await self.db.execute(select(Result).where(Result.id == result_id))
@@ -310,7 +318,7 @@ class QuizRepository:
             raise HTTPException(status_code=404, detail="Result not found")
         user_id = result.user_id
         return user_id
-    
+
     async def get_quiz_id_by_result_id(self, result_id: UUID):
         result = await self.db.execute(select(Result).where(Result.id == result_id))
         result = result.scalars().first()
@@ -318,7 +326,7 @@ class QuizRepository:
             raise HTTPException(status_code=404, detail="Result not found")
         quiz_id = result.quiz_id
         return quiz_id
-        
+
     async def get_company_id_by_quiz_id(self, quiz_id: UUID):
         quiz = await self.db.execute(select(Quiz).where(Quiz.id == quiz_id))
         quiz = quiz.scalars().first()
@@ -326,20 +334,21 @@ class QuizRepository:
             raise HTTPException(status_code=404, detail="Quiz not found")
         company_id = quiz.company_id
         return company_id
-    
-    async def check_if_user_answer_is_correct(self,user_answer_id:UUID,user_answer_question_id:UUID):
+
+    async def check_if_user_answer_is_correct(self, user_answer_id: UUID, user_answer_question_id: UUID):
         correct_answer_id = await self.db.execute(select(Answer.id).where(Answer.question_id == user_answer_question_id).where(Answer.is_correct == True))
         correct_answer_id = correct_answer_id.scalars().first()
         if not correct_answer_id:
-            raise HTTPException(status_code=404, detail="Correct answer not found for this question")
+            raise HTTPException(
+                status_code=404, detail="Correct answer not found for this question")
         return user_answer_id == correct_answer_id
-    
 
-    async def get_user_answers_by_result_id(self, result_id: UUID)->List[UserAnswer]:
+    async def get_user_answers_by_result_id(self, result_id: UUID) -> List[UserAnswer]:
         user_answers = await self.db.execute(select(UserAnswer).where(UserAnswer.result_id == result_id))
         user_answers = user_answers.scalars().all()
         if not user_answers:
-            raise HTTPException(status_code=404, detail="User answers not found")
+            raise HTTPException(
+                status_code=404, detail="User answers not found")
         return user_answers
 
     # be-14
@@ -351,3 +360,24 @@ class QuizRepository:
         quiz_ids = [quiz.id for quiz in quizzes]
         return quiz_ids
 
+    async def get_score_from_result(self, result_id: UUID) -> float:
+        result = await self.db.execute(select(Result).where(Result.id == result_id))
+        result = result.scalars().first()
+        if not result:
+            raise HTTPException(status_code=404, detail="Result not found")
+        score = result.score
+        return score
+
+    async def get_all_members_of_company(self, company_id: UUID) -> List[CompanyMember]:
+        members = await self.db.execute(select(CompanyMember).where(CompanyMember.company_id == company_id))
+        members = members.scalars().all()
+        if not members:
+            raise HTTPException(status_code=404, detail="Members not found")
+        return members
+
+    async def get_last_quiz_submition(self, user_id: UUID):
+        result = await self.db.execute(select(Result).where(Result.user_id == user_id).order_by(Result.created_at.desc()).limit(1))
+        result = result.scalars().first()
+        if not result:
+            return None
+        return result
